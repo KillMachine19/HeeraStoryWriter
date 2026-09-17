@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from config import FINNHUB_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID
 from notifications.telegram_bot import send_stock_alert, send_session_start, send_pdf_report
 from reports.pdf_generator import generate_pdf
-from scanner.news_fetcher import get_all_news, has_supporting_news
+from scanner.news_fetcher import get_all_news, has_supporting_news  # noqa: F401 (has_supporting_news used inline)
 from scanner.price_scanner import enrich_and_filter, get_movers
 from state.state_manager import (
     get_all_flagged_today,
@@ -58,11 +58,14 @@ def run_scan(session: str) -> None:
     Steps:
       1. Fetch raw movers from Yahoo Finance screener
       2. Apply eligibility filters (US-listed, mkt cap, % move)
-      3. Skip stocks already notified this session
-      4. Fetch news/analyst data from Finnhub + RSS + SEC EDGAR
-      5. Send Telegram alert (with or without news — flagged either way)
-      6. Persist to daily state for deduplication
+      3. Sort by absolute % move, keep top 7 new stocks per cycle
+      4. Skip stocks already notified this session
+      5. Fetch news/analyst data from Finnhub + RSS + SEC EDGAR
+      6. Send Telegram alert (with or without news — flagged either way)
+      7. Persist to daily state for deduplication
     """
+    MAX_ALERTS_PER_CYCLE = 7
+
     logger.info(f"─── Scan cycle: {session_label(session)} ───────────────────────")
 
     raw_movers = get_movers(session)
@@ -72,10 +75,19 @@ def run_scan(session: str) -> None:
         logger.info("No qualifying movers this cycle")
         return
 
+    # Sort by biggest move first, then cap to top 7 *new* stocks
+    qualified.sort(key=lambda s: abs(s["pct_change"]), reverse=True)
+
     news_cache: dict = {}
+    alerts_sent = 0
 
     for stock in qualified:
         symbol = stock["symbol"]
+
+        # ── Cap: stop once we've sent 7 new alerts this cycle ─────────────
+        if alerts_sent >= MAX_ALERTS_PER_CYCLE:
+            logger.info(f"Reached {MAX_ALERTS_PER_CYCLE}-alert cap for this cycle")
+            break
 
         # ── Deduplication: skip if we've already alerted this session ──────
         if is_already_notified(symbol, session):
@@ -99,8 +111,9 @@ def run_scan(session: str) -> None:
                 f"{symbol} ({stock['pct_change']:+.2f}%): alerted with news"
             )
 
-        # ── Persist state ──────────────────────────────────────────────────
-        mark_notified(symbol, session, stock)
+        # ── Persist state (news cached so PDF needs no re-fetch) ───────────
+        mark_notified(symbol, session, stock, news=news)
+        alerts_sent += 1
 
     return news_cache
 
@@ -108,22 +121,19 @@ def run_scan(session: str) -> None:
 # ── Post-market PDF ───────────────────────────────────────────────────────────
 
 def run_post_market() -> None:
-    """Generate the daily PDF and send it to the Telegram channel."""
+    """
+    Generate the daily PDF and send it to the Telegram channel.
+    News was cached in the state file during each scan alert, so no re-fetching needed.
+    """
     logger.info("Post-market: generating PDF report")
 
-    # Re-fetch news for all flagged stocks to enrich the PDF
-    state    = get_all_flagged_today()
-    news_map: dict = {}
-
-    for session_key in ("pre_market", "market_hours"):
-        for symbol, data in state.get(session_key, {}).items():
-            if symbol not in news_map:
-                news_map[symbol] = get_all_news(symbol, data.get("name", symbol))
-
-    pdf_path = generate_pdf(news_cache=news_map)
+    # News is already embedded in state entries via mark_notified(news=...)
+    # generate_pdf() reads state and uses _news key from each entry directly
+    pdf_path = generate_pdf()
 
     if pdf_path:
-        total = sum(len(v) for v in state.values())
+        state    = get_all_flagged_today()
+        total    = sum(len(v) for v in state.values())
         date_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
         send_pdf_report(pdf_path, date_str=date_str, total_flagged=total)
     else:

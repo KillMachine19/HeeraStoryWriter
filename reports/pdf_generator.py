@@ -20,10 +20,40 @@ Uses fpdf2 (lightweight, no C dependencies, works on GitHub Actions).
 from __future__ import annotations
 
 import os
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fpdf import FPDF
+
+# ── Unicode safety ────────────────────────────────────────────────────────────
+# fpdf2's built-in Helvetica only covers latin-1.  News headlines and company
+# names can contain em dashes, curly quotes, etc.  Normalise them before every
+# string that goes into a cell or multi_cell.
+
+_CHAR_MAP = {
+    "—": " - ",   # em dash
+    "–": " - ",   # en dash
+    "‘": "'",     # left single quote
+    "’": "'",     # right single quote
+    "“": '"',     # left double quote
+    "”": '"',     # right double quote
+    "…": "...",   # ellipsis
+    "·": "-",     # middle dot
+    "•": "*",     # bullet
+    "™": "(TM)",  # trademark
+    "®": "(R)",   # registered
+    "©": "(C)",   # copyright
+}
+
+def _s(text) -> str:
+    """Return a latin-1-safe version of text for fpdf2 Helvetica cells."""
+    t = str(text)
+    for ch, repl in _CHAR_MAP.items():
+        t = t.replace(ch, repl)
+    # Normalise remaining accented characters to their ASCII base
+    t = unicodedata.normalize("NFKD", t)
+    return t.encode("latin-1", errors="replace").decode("latin-1")
 
 from config import PDF_OUTPUT_DIR, STATE_DIR
 from state.state_manager import get_all_flagged_today
@@ -83,24 +113,24 @@ class MarketReport(FPDF):
     def h1(self, text: str, color=_BLACK):
         self.set_font("Helvetica", "B", 16)
         self.set_text_color(*color)
-        self.multi_cell(0, 8, text)
+        self.multi_cell(0, 8, _s(text))
         self.ln(2)
 
     def h2(self, text: str, color=_ACCENT):
         self.set_font("Helvetica", "B", 11)
         self.set_text_color(*color)
-        self.cell(0, 7, text, ln=True)
+        self.cell(0, 7, _s(text), ln=True)
         self.ln(1)
 
     def body(self, text: str, color=_BLACK):
         self.set_font("Helvetica", "", 9)
         self.set_text_color(*color)
-        self.multi_cell(0, 5, text)
+        self.multi_cell(0, 5, _s(text))
 
     def small(self, text: str, color=_GRAY):
         self.set_font("Helvetica", "", 8)
         self.set_text_color(*color)
-        self.multi_cell(0, 4.5, text)
+        self.multi_cell(0, 4.5, _s(text))
 
     def divider(self):
         self.set_draw_color(*_LIGHT)
@@ -199,16 +229,16 @@ def _summary_table(pdf: MarketReport, state: dict) -> None:
             pdf.set_text_color(*_BLACK)
 
             row = [
-                symbol,
-                (data.get("name") or "")[:30],
-                session_label(session_key),
-                f"{pct:+.2f}%",
-                f"${data.get('current_price', 0)}",
-                f"${round(data.get('market_cap', 0) / 1_000_000, 0):.0f}M",
+                _s(symbol),
+                _s((data.get("name") or "")[:30]),
+                _s(session_label(session_key)),
+                _s(f"{pct:+.2f}%"),
+                _s(f"${data.get('current_price', 0)}"),
+                _s(f"${round(data.get('market_cap', 0) / 1_000_000, 0):.0f}M"),
             ]
 
             for i, cell in enumerate(row):
-                if i == 3:  # Move % column — colour coded
+                if i == 3:  # Move % column - colour coded
                     pdf.set_text_color(*color)
                 else:
                     pdf.set_text_color(*_BLACK)
@@ -222,119 +252,125 @@ def _summary_table(pdf: MarketReport, state: dict) -> None:
 # ── Per-stock detail ──────────────────────────────────────────────────────────
 
 def _stock_section(pdf: MarketReport, symbol: str, data: dict, session_key: str) -> None:
-    """Render one stock's full detail section."""
-    pdf.add_page()
-
+    """
+    Compact per-stock section — one page maximum per stock.
+    Designed as a quick-reference brief, not a deep dive.
+    """
     pct   = data.get("pct_change", 0)
     color = _GREEN if pct >= 0 else _RED
-    arrow = "▲" if pct >= 0 else "▼"
-
-    # ── Stock header ──────────────────────────────────────────────────────
-    pdf.filled_rect(16, pdf.get_y(), 178, 18, _LIGHT)
-    pdf.set_xy(18, pdf.get_y() + 2)
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.set_text_color(*_ACCENT)
-    pdf.cell(60, 7, symbol)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.set_text_color(*_BLACK)
-    pdf.cell(80, 7, (data.get("name") or "")[:45])
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(*color)
-    pdf.cell(0, 7, f"{arrow} {pct:+.2f}%", align="R")
-    pdf.ln(12)
-
-    # ── Key metrics row ───────────────────────────────────────────────────
-    pdf.set_font("Helvetica", "", 8)
-    pdf.set_text_color(*_GRAY)
+    arrow = "+" if pct >= 0 else "-"
     mkt_cap_m = round(data.get("market_cap", 0) / 1_000_000, 1)
-    metrics = (
-        f"Session: {session_label(session_key)}   |   "
-        f"Price: ${data.get('current_price', 0)}   |   "
-        f"Prev Close: ${data.get('prev_close', 'N/A')}   |   "
-        f"Mkt Cap: ${mkt_cap_m}M   |   "
-        f"Exchange: {data.get('exchange', 'N/A')}   |   "
-        f"First Flagged: {data.get('first_seen', 'N/A')[:16]} UTC"
-    )
-    pdf.multi_cell(0, 5, metrics)
-    pdf.ln(3)
-    pdf.divider()
-
     news = data.get("_news", {})
 
-    # ── News / Catalyst ───────────────────────────────────────────────────
-    pdf.h2("News & Catalyst")
+    # ── Stock header bar ──────────────────────────────────────────────────
+    pdf.filled_rect(16, pdf.get_y(), 178, 14, _LIGHT)
+    pdf.set_xy(18, pdf.get_y() + 2)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(22, 6, _s(symbol))
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*_BLACK)
+    pdf.cell(96, 6, _s((data.get("name") or "")[:50]))
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(*color)
+    pdf.cell(0, 6, _s(f"{arrow} {pct:+.2f}%"), align="R")
+    pdf.ln(9)
 
-    finnhub_news = (news.get("finnhub") or [])[:3]
-    rss_news     = (news.get("rss_mentions") or [])[:2]
-    all_news     = finnhub_news + rss_news
+    # ── One-line metrics ──────────────────────────────────────────────────
+    pdf.set_font("Helvetica", "", 7.5)
+    pdf.set_text_color(*_GRAY)
+    pdf.cell(
+        0, 5,
+        _s(
+            f"{session_label(session_key)}  |  Price ${data.get('current_price',0)}  "
+            f"|  Prev Close ${data.get('prev_close','N/A')}  |  Cap ${mkt_cap_m}M  "
+            f"|  {data.get('exchange','N/A')}  |  Flagged {str(data.get('first_seen',''))[:16]} UTC"
+        ),
+        ln=True,
+    )
+    pdf.ln(2)
+    pdf.divider()
+
+    # ── News & catalyst (top 3) ───────────────────────────────────────────
+    all_news = ((news.get("finnhub") or [])[:2] + (news.get("rss_mentions") or [])[:1])
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(0, 5, "NEWS / CATALYST", ln=True)
 
     if all_news:
-        for item in all_news[:4]:
-            pdf.set_font("Helvetica", "B", 8)
+        for item in all_news[:3]:
+            headline = _s((item.get("headline") or "")[:95])
+            source   = _s(item.get("source", ""))
+            url      = item.get("url", "")
+            pdf.set_font("Helvetica", "B", 7.5)
             pdf.set_text_color(*_BLACK)
-            headline = (item.get("headline") or "")[:110]
-            pdf.multi_cell(0, 5, f"• {headline}")
+            pdf.cell(0, 4.5, f"* {headline}", ln=True)
             pdf.set_font("Helvetica", "", 7)
             pdf.set_text_color(*_GRAY)
-            source  = item.get("source", "")
-            pub_at  = item.get("published_at", "")
-            url     = item.get("url", "")
-            meta    = f"  Source: {source}   |   {pub_at}"
+            line = f"  {source}"
             if url:
-                meta += f"   |   URL: {url[:80]}"
-            pdf.multi_cell(0, 4, meta)
-            pdf.ln(1)
+                line += f"  -  {url[:65]}"
+            pdf.cell(0, 3.5, _s(line), ln=True)
+            pdf.ln(0.5)
     else:
-        pdf.body(
-            "No news found in monitored sources (Finnhub, Reuters, MarketWatch, Benzinga).\n"
-            "Recommend manual verification on Bloomberg or Dow Jones Newswires.",
-            color=_RED,
-        )
+        pdf.set_font("Helvetica", "I", 7.5)
+        pdf.set_text_color(*_RED)
+        pdf.cell(0, 5, "No news found - verify manually on Bloomberg / Reuters", ln=True)
 
-    pdf.ln(3)
+    pdf.ln(2)
 
-    # ── SEC filings ───────────────────────────────────────────────────────
-    sec = news.get("sec_filings") or []
+    # ── SEC filing (one line) ─────────────────────────────────────────────
+    sec = (news.get("sec_filings") or [])[:1]
     if sec:
-        pdf.h2("SEC Filings (Primary Source)")
-        for f in sec[:2]:
-            pdf.set_font("Helvetica", "B", 8)
-            pdf.set_text_color(*_BLACK)
-            pdf.cell(0, 5, f"• {f.get('form','8-K')} — Filed: {f.get('filed','')}", ln=True)
-            pdf.set_font("Helvetica", "", 7)
-            pdf.set_text_color(*_GRAY)
-            pdf.multi_cell(0, 4, f"  EDGAR: {f.get('url','')[:90]}")
-            pdf.ln(1)
+        f = sec[0]
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*_ACCENT)
+        pdf.cell(0, 5, "SEC FILING (PRIMARY SOURCE)", ln=True)
+        pdf.set_font("Helvetica", "", 7.5)
+        pdf.set_text_color(*_BLACK)
+        pdf.cell(0, 4, _s(f"  {f.get('form','8-K')} filed {f.get('filed','')}  -  {f.get('url','')[:65]}"), ln=True)
         pdf.ln(2)
 
-    # ── Analyst consensus ─────────────────────────────────────────────────
+    # ── Analyst snapshot (one line) ───────────────────────────────────────
     recs = news.get("analyst_actions") or []
     pt   = news.get("price_target")
     if recs or pt:
-        pdf.h2("Analyst Data")
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*_ACCENT)
+        pdf.cell(0, 5, "ANALYST SNAPSHOT", ln=True)
+        pdf.set_font("Helvetica", "", 7.5)
+        pdf.set_text_color(*_BLACK)
         if recs:
             r = recs[0]
-            pdf.body(
-                f"Consensus ({r.get('period','latest')}): "
-                f"Buy {r.get('buy',0)}  Hold {r.get('hold',0)}  "
-                f"Sell {r.get('sell',0)}  Strong Buy {r.get('strongBuy',0)}"
+            pdf.cell(
+                0, 4,
+                _s(f"  Consensus ({r.get('period','')}):  Buy {r.get('buy',0)}  "
+                   f"Hold {r.get('hold',0)}  Sell {r.get('sell',0)}  "
+                   f"Strong Buy {r.get('strongBuy',0)}"),
+                ln=True,
             )
         if pt:
-            pdf.body(
-                f"Price Target — Mean: ${pt['mean']}  "
-                f"High: ${pt['high']}  Low: ${pt['low']}  "
-                f"({pt['count']} analysts, updated {pt.get('last_updated','')})"
+            upside = ""
+            if data.get("current_price"):
+                up = round((pt["mean"] - data["current_price"]) / data["current_price"] * 100, 1)
+                upside = f"  ({up:+.1f}% from close)"
+            pdf.cell(
+                0, 4,
+                _s(f"  Price Target: Mean ${pt['mean']}  H ${pt['high']}  L ${pt['low']}{upside}"),
+                ln=True,
             )
-        pdf.ln(3)
+        pdf.ln(2)
 
     # ── Story angles ──────────────────────────────────────────────────────
-    pdf.h2("Story Angles for Tomorrow")
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(0, 5, "STORY ANGLES", ln=True)
     angles = _build_story_angles(symbol, data, news, session_key)
-    pdf.set_font("Helvetica", "", 8)
+    pdf.set_font("Helvetica", "", 7.5)
     pdf.set_text_color(*_BLACK)
-    for angle in angles:
-        pdf.multi_cell(0, 5, f"  → {angle}")
-        pdf.ln(0.5)
+    for angle in angles[:4]:   # cap at 4 for compactness
+        pdf.cell(0, 4.5, _s(f"  -> {angle[:100]}"), ln=True)
+    pdf.ln(3)
 
 
 def _build_story_angles(symbol: str, data: dict, news: dict, session_key: str) -> list[str]:
@@ -388,12 +424,11 @@ def _build_story_angles(symbol: str, data: dict, news: dict, session_key: str) -
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def generate_pdf(news_cache: dict | None = None) -> str | None:
+def generate_pdf() -> str | None:
     """
     Build the full post-market PDF and return the output file path.
-
-    news_cache: optional dict keyed by symbol with pre-fetched news data
-                (used when main.py passes cached news to avoid re-fetching).
+    News is read directly from each state entry's '_news' key,
+    which was stored by mark_notified() during the scan — no API calls here.
     """
     state = get_all_flagged_today()
     total_stocks = sum(len(v) for v in state.values())
@@ -412,10 +447,16 @@ def generate_pdf(news_cache: dict | None = None) -> str | None:
     _summary_table(pdf, state)
 
     for session_key in ("pre_market", "market_hours"):
-        for symbol, data in state.get(session_key, {}).items():
-            # Attach cached news if provided
-            if news_cache and symbol in news_cache:
-                data["_news"] = news_cache[symbol]
+        stocks = state.get(session_key, {})
+        if not stocks:
+            continue
+        pdf.add_page()
+        pdf.h1(f"{'Pre-Market' if session_key == 'pre_market' else 'Market Hours'} - Detail", color=_ACCENT)
+        pdf.divider()
+
+        for symbol, data in stocks.items():
+            if pdf.get_y() > 230:
+                pdf.add_page()
             _stock_section(pdf, symbol, data, session_key)
 
     pdf.output(filepath)

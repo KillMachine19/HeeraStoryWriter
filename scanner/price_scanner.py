@@ -92,7 +92,9 @@ def enrich_and_filter(movers: list[dict], session: str) -> list[dict]:
         if not symbol:
             continue
 
-        exchange: str = quote.get("fullExchangeName", "")
+        # Use short code for filtering; keep full name for display
+        exchange: str = quote.get("exchange", "")
+        exchange_display: str = quote.get("fullExchangeName", exchange)
         market_cap: float = _safe_float(quote.get("marketCap"))
         name: str = quote.get("shortName") or quote.get("longName") or symbol
 
@@ -119,7 +121,7 @@ def enrich_and_filter(movers: list[dict], session: str) -> list[dict]:
         qualified.append({
             "symbol":       symbol,
             "name":         name,
-            "exchange":     exchange,
+            "exchange":     exchange_display,
             "market_cap":   int(market_cap),
             "pct_change":   round(pct_change, 2),
             "current_price": round(_safe_float(current_price), 2),

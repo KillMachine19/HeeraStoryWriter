@@ -99,6 +99,9 @@ def fetch_price_target(symbol: str) -> dict | None:
 
     try:
         resp = requests.get(url, params=params, timeout=10)
+        if resp.status_code == 403:
+            # Price target endpoint requires Finnhub paid tier — skip silently
+            return None
         resp.raise_for_status()
         data = resp.json()
         if data.get("targetMean"):
@@ -152,11 +155,18 @@ def fetch_sec_filings(symbol: str) -> list[dict]:
         filed = src.get("file_date", "")
         form  = src.get("form_type", "8-K")
 
-        # Build a direct EDGAR filing link using accession number
-        accession = src.get("accession_no", "").replace("-", "")
-        cik = src.get("file_num", "").lstrip("0") if src.get("file_num") else ""
+        # Build EDGAR filing URL using accession number and entity_id (CIK)
+        # file_num is a filing number (e.g. "001-12345"), NOT the CIK — use entity_id
+        accession = src.get("accession_no", "")
+        entity_id = src.get("entity_id") or src.get("file_num")
+        # entity_id may be a list; take first element
+        if isinstance(entity_id, list):
+            entity_id = entity_id[0] if entity_id else ""
+        cik = str(entity_id).lstrip("0") if entity_id else ""
+
         if accession and cik:
-            filing_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
+            acc_clean = accession.replace("-", "")
+            filing_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/"
         else:
             filing_url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company={symbol}&type=8-K&count=5"
 
@@ -186,7 +196,9 @@ def fetch_rss_mentions(symbol: str, company_name: str) -> list[dict]:
 
     for source_name, feed_url in RSS_FEEDS.items():
         try:
-            feed = feedparser.parse(feed_url)
+            # Fetch with an explicit timeout — feedparser.parse() has no timeout
+            raw = requests.get(feed_url, headers=_HEADERS, timeout=8)
+            feed = feedparser.parse(raw.content)
         except Exception as exc:
             logger.warning(f"RSS parse failed ({source_name}): {exc}")
             continue
