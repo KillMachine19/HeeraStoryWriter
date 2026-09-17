@@ -1,0 +1,70 @@
+name: Market Scanner
+
+on:
+  # ── Scheduled runs ──────────────────────────────────────────────────────────
+  # Every 10 minutes, Mon–Fri, from 08:00 UTC to 21:00 UTC
+  #
+  # Coverage (accounting for EDT/EST transitions):
+  #   EDT (Mar–Nov)  08:00 UTC = 04:00 ET  →  21:00 UTC = 17:00 ET  ✓
+  #   EST (Nov–Mar)  08:00 UTC = 03:00 ET  →  21:00 UTC = 16:00 ET  ✓
+  #
+  # The Python script self-exits gracefully when outside market hours,
+  # so over-scheduling is safe and costs only a few seconds of runner time.
+  schedule:
+    - cron: "*/10 8-21 * * 1-5"
+
+  # ── Manual trigger from GitHub UI ───────────────────────────────────────────
+  workflow_dispatch:
+    inputs:
+      force_session:
+        description: "Force a specific market session (leave blank for auto-detect)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - pre_market
+          - market_hours
+
+jobs:
+  scan:
+    name: Run Market Scanner
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python setup ─────────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # ── Install dependencies ──────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Restore today's state (deduplication across runs) ────────────────────
+      # Key includes the UTC date so state resets each new trading day.
+      - name: Restore daily state cache
+        uses: actions/cache@v4
+        with:
+          path: state/
+          key: daily-state-${{ github.run_number }}
+          restore-keys: |
+            daily-state-
+
+      # ── Run scanner ───────────────────────────────────────────────────────────
+      - name: Run scanner
+        env:
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          FINNHUB_API_KEY:     ${{ secrets.FINNHUB_API_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.force_session }}" ]; then
+            python main.py --force-session ${{ github.event.inputs.force_session }}
+          else
+            python main.py
+          fi

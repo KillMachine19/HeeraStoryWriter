@@ -1,0 +1,57 @@
+name: Post-Market PDF Report
+
+on:
+  # ── Scheduled trigger ────────────────────────────────────────────────────────
+  # 4:15 PM ET, Mon–Fri — giving the market 15 minutes to fully close.
+  # EDT (Mar–Nov): 20:15 UTC  |  EST (Nov–Mar): 21:15 UTC
+  # Both crons run; the script is idempotent (PDF already exists → skips cleanly).
+  schedule:
+    - cron: "15 20 * * 1-5"   # EDT
+    - cron: "15 21 * * 1-5"   # EST
+
+  # ── Manual trigger ───────────────────────────────────────────────────────────
+  workflow_dispatch:
+
+jobs:
+  generate-report:
+    name: Generate & Send PDF
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Restore today's state so the PDF knows which stocks were flagged ──────
+      - name: Restore daily state cache
+        uses: actions/cache@v4
+        with:
+          path: state/
+          key: daily-state-
+          restore-keys: |
+            daily-state-
+
+      # ── Generate PDF and send to Telegram ─────────────────────────────────────
+      - name: Generate PDF report
+        env:
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          FINNHUB_API_KEY:     ${{ secrets.FINNHUB_API_KEY }}
+        run: python main.py --pdf-only
+
+      # ── Upload PDF as a GitHub Actions artifact (30-day retention) ────────────
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heera-report-${{ github.run_id }}
+          path: reports/output/*.pdf
+          retention-days: 30

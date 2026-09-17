@@ -1,0 +1,13 @@
+# ── Data ──────────────────────────────────────────────────────────────────────
+yfinance>=0.2.40          # Yahoo Finance price data + pre-market quotes
+requests>=2.31.0          # HTTP calls to Finnhub, Yahoo, SEC EDGAR, Telegram
+feedparser>=6.0.11        # RSS feed parsing (Reuters, MarketWatch, Benzinga)
+
+# ── PDF generation ────────────────────────────────────────────────────────────
+fpdf2>=2.7.9              # Lightweight PDF builder; no C dependencies
+
+# ── Timezone handling ─────────────────────────────────────────────────────────
+pytz>=2024.1              # US/Eastern timezone conversions
+
+# ── Environment variables ─────────────────────────────────────────────────────
+python-dotenv>=1.0.0      # Load .env file for local runs
