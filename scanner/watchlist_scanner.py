@@ -11,10 +11,14 @@ Differences from the screener scanner:
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
-import requests
+import yfinance as yf
+
+# Suppress yfinance's own noisy warnings for delisted/missing symbols
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 from config import FINNHUB_API_KEY, WATCHLIST, WATCHLIST_ALL
 from scanner.news_fetcher import fetch_finnhub_news, fetch_yahoo_news
@@ -22,55 +26,45 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; HeeraMarketScanner/1.0)"}
-
 # Minimum move to flag a price change even without news
 _NOTABLE_MOVE_PCT = 1.5
 
 
 # ── Price fetch ───────────────────────────────────────────────────────────────
 
-def fetch_watchlist_prices(session: str) -> dict[str, dict]:
+def fetch_watchlist_prices(market_session: str) -> dict[str, dict]:
     """
-    Fetch price data for all watchlist symbols in a single Yahoo Finance
-    v7 quote API call.  Returns a dict keyed by symbol.
+    Fetch price data for all watchlist symbols via yfinance (handles Yahoo
+    auth/TLS fingerprinting automatically).  Returns a dict keyed by symbol.
     """
-    symbols_csv = ",".join(WATCHLIST_ALL)
-    url = (
-        "https://query1.finance.yahoo.com/v7/finance/quote"
-        f"?symbols={symbols_csv}&formatted=false&lang=en-US&region=US"
-    )
-
-    try:
-        resp = requests.get(url, headers=_HEADERS, timeout=15)
-        resp.raise_for_status()
-        quotes = resp.json().get("quoteResponse", {}).get("result", [])
-    except Exception as exc:
-        logger.warning(f"Watchlist price fetch failed: {exc}")
-        return {}
-
+    tickers = yf.Tickers(" ".join(WATCHLIST_ALL))
     results: dict[str, dict] = {}
-    for q in quotes:
-        symbol = q.get("symbol", "")
-        if not symbol:
-            continue
 
-        if session == "pre_market":
-            pct_change = q.get("preMarketChangePercent") or 0.0
-            current_price = q.get("preMarketPrice") or q.get("regularMarketPrice")
-        else:
-            pct_change = q.get("regularMarketChangePercent") or 0.0
-            current_price = q.get("regularMarketPrice")
+    for symbol in WATCHLIST_ALL:
+        try:
+            t  = tickers.tickers[symbol]
+            fi = t.fast_info
 
-        results[symbol] = {
-            "symbol":        symbol,
-            "name":          q.get("shortName") or q.get("longName") or symbol,
-            "current_price": round(float(current_price or 0), 2),
-            "prev_close":    round(float(q.get("regularMarketPreviousClose") or 0), 2),
-            "pct_change":    round(float(pct_change), 2),
-            "market_cap":    int(q.get("marketCap") or 0),
-            "exchange":      q.get("fullExchangeName", ""),
-        }
+            last_price = float(fi.last_price or 0)
+            prev_close = float(fi.previous_close or 0)
+            market_cap = int(getattr(fi, "market_cap", 0) or 0)
+            exchange   = str(getattr(fi, "exchange", "") or "")
+
+            pct_change = 0.0
+            if prev_close:
+                pct_change = (last_price - prev_close) / prev_close * 100
+
+            results[symbol] = {
+                "symbol":        symbol,
+                "name":          symbol,   # fast_info has no name; ticker is sufficient
+                "current_price": round(last_price, 2),
+                "prev_close":    round(prev_close, 2),
+                "pct_change":    round(pct_change, 2),
+                "market_cap":    market_cap,
+                "exchange":      exchange,
+            }
+        except Exception as exc:
+            logger.debug(f"{symbol}: price fetch skipped — {exc}")
 
     logger.info(f"Watchlist prices fetched: {len(results)}/{len(WATCHLIST_ALL)} symbols")
     return results

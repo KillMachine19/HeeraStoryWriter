@@ -23,12 +23,10 @@ MAX_MOVERS_TO_FETCH: int = 100          # How many screener results to pull
 # ── Yahoo Finance exchange codes that qualify as US-listed ────────────────────
 US_EXCHANGES: set[str] = {"NMS", "NYQ", "ASE", "NGM", "NCM", "PCX", "BATS", "NYSEArca"}
 
-# ── News sources: RSS feeds scraped for mentions ──────────────────────────────
+# ── News sources: RSS feeds (fallback only — used when Yahoo + Finnhub return nothing) ──
 RSS_FEEDS: dict[str, str] = {
-    "Reuters":    "https://feeds.reuters.com/reuters/businessNews",
     "MarketWatch": "https://feeds.marketwatch.com/marketwatch/topstories",
-    "Benzinga":   "https://www.benzinga.com/feed",
-    "Investing.com": "https://www.investing.com/rss/news.rss",
+    "Benzinga":    "https://www.benzinga.com/feed",
 }
 
 # ── Watchlist — fixed universe tracked every scan cycle ──────────────────────
