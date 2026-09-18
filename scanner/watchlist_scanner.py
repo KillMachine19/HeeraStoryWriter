@@ -17,7 +17,7 @@ from typing import Any
 import requests
 
 from config import FINNHUB_API_KEY, WATCHLIST, WATCHLIST_ALL
-from scanner.news_fetcher import fetch_finnhub_news, fetch_rss_mentions
+from scanner.news_fetcher import fetch_finnhub_news, fetch_yahoo_news
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -82,24 +82,37 @@ def fetch_watchlist_news(
     seen_urls: set[str],
 ) -> dict[str, list[dict]]:
     """
-    Fetch Finnhub news for every watchlist symbol.
-    Returns only articles whose URL has NOT been seen before (deduplication).
+    Fetch today's news for every watchlist symbol.
+    Yahoo Finance is checked first (fastest); Finnhub fills any gaps.
+    Only articles with URLs not seen today are returned (deduplication).
 
-    `seen_urls` is the set of URLs already sent to Telegram today — it is
-    updated in-place so the caller can persist it back to state.
+    `seen_urls` is updated in-place — caller persists it back to state.
     """
     news_by_symbol: dict[str, list[dict]] = {}
 
     for symbol in WATCHLIST_ALL:
-        articles = fetch_finnhub_news(symbol)
-        fresh = [a for a in articles if a.get("url") and a["url"] not in seen_urls]
+        combined: list[dict] = []
+        local_seen: set[str] = set()
 
-        if fresh:
-            news_by_symbol[symbol] = fresh
-            for a in fresh:
-                seen_urls.add(a["url"])
+        # Yahoo Finance first — most up-to-date
+        for a in fetch_yahoo_news(symbol):
+            u = a.get("url", "")
+            if u and u not in seen_urls and u not in local_seen:
+                combined.append(a)
+                local_seen.add(u)
 
-        # Respect Finnhub free tier: ~60 calls/min → space them gently
+        # Finnhub as secondary
+        for a in fetch_finnhub_news(symbol):
+            u = a.get("url", "")
+            if u and u not in seen_urls and u not in local_seen:
+                combined.append(a)
+                local_seen.add(u)
+
+        if combined:
+            news_by_symbol[symbol] = combined
+            seen_urls.update(local_seen)
+
+        # Respect Finnhub free tier: ~60 calls/min
         time.sleep(0.15)
 
     return news_by_symbol

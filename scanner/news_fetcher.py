@@ -1,10 +1,12 @@
 """
 News fetcher — aggregates supporting evidence for a stock move from:
-  1. Finnhub company news API
-  2. Finnhub analyst recommendations
-  3. SEC EDGAR 8-K filings (company-issued, primary source)
-  4. RSS feeds (Reuters, MarketWatch, Benzinga, Investing.com)
+  1. Yahoo Finance news (primary — fast, stock-specific, real-time)
+  2. Finnhub company news API (secondary)
+  3. Finnhub analyst recommendations
+  4. SEC EDGAR 8-K filings (company-issued, primary source)
+  5. RSS feeds (Reuters, MarketWatch — fallback only)
 
+All news is filtered to TODAY (ET timezone) only — no stale articles.
 All functions return plain dicts; no business logic here — that lives in main.py.
 """
 
@@ -15,30 +17,89 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import feedparser
+import pytz
 import requests
 
-from config import FINNHUB_API_KEY, RSS_FEEDS, NEWS_LOOKBACK_HOURS
+from config import FINNHUB_API_KEY, RSS_FEEDS
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_HEADERS = {"User-Agent": "HeeraMarketScanner/1.0 contact@heera.app"}
+_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; HeeraMarketScanner/1.0)"}
+_ET      = pytz.timezone("America/New_York")
+
+
+def _today_et_cutoff() -> float:
+    """Unix timestamp for midnight ET today — articles before this are stale."""
+    now_et = datetime.now(_ET)
+    midnight_et = now_et.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight_et.timestamp()
+
+
+def _et_time_str(unix_ts: int) -> str:
+    """Format a Unix timestamp as 'HH:MM ET' for display."""
+    if not unix_ts:
+        return ""
+    return datetime.fromtimestamp(unix_ts, tz=_ET).strftime("%I:%M %p ET")
+
+
+# ── Yahoo Finance news (primary, fastest) ─────────────────────────────────────
+
+def fetch_yahoo_news(symbol: str) -> list[dict]:
+    """
+    Fetch today's news for a stock from Yahoo Finance search API.
+    Yahoo Finance is the fastest free real-time source for US equities.
+    """
+    url = "https://query1.finance.yahoo.com/v1/finance/search"
+    params = {
+        "q":          symbol,
+        "newsCount":  8,
+        "lang":       "en-US",
+        "region":     "US",
+    }
+
+    try:
+        resp = requests.get(url, params=params, headers=_HEADERS, timeout=10)
+        resp.raise_for_status()
+        articles = resp.json().get("news", [])
+    except Exception as exc:
+        logger.warning(f"Yahoo Finance news failed ({symbol}): {exc}")
+        return []
+
+    cutoff = _today_et_cutoff()
+    results = []
+    for a in articles:
+        pub_ts = a.get("providerPublishTime", 0)
+        if pub_ts < cutoff:
+            continue  # skip yesterday's articles
+        link = a.get("link", "")
+        title = (a.get("title") or "").strip()
+        if not title:
+            continue
+        results.append({
+            "headline":     title,
+            "source":       a.get("publisher", "Yahoo Finance"),
+            "url":          link,
+            "summary":      "",
+            "published_at": _et_time_str(pub_ts),
+        })
+
+    return results[:5]
 
 
 # ── Finnhub ───────────────────────────────────────────────────────────────────
 
 def fetch_finnhub_news(symbol: str) -> list[dict]:
     """
-    Fetch the most recent company-specific news articles from Finnhub.
-    Looks back NEWS_LOOKBACK_HOURS hours.
+    Fetch today's company-specific news from Finnhub (secondary source).
+    Uses today's date for both from/to and then re-filters by ET timestamp.
     """
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    from_date = (datetime.utcnow() - timedelta(hours=NEWS_LOOKBACK_HOURS)).strftime("%Y-%m-%d")
 
     url = "https://finnhub.io/api/v1/company-news"
     params = {
         "symbol": symbol,
-        "from":   from_date,
+        "from":   today,
         "to":     today,
         "token":  FINNHUB_API_KEY,
     }
@@ -51,23 +112,25 @@ def fetch_finnhub_news(symbol: str) -> list[dict]:
         logger.warning(f"Finnhub news failed ({symbol}): {exc}")
         return []
 
+    cutoff = _today_et_cutoff()
     results = []
-    for a in articles[:6]:  # cap at 6 most recent
+    for a in articles[:8]:
         url_link = a.get("url", "")
-        headline = a.get("headline", "").strip()
+        headline = (a.get("headline") or "").strip()
+        pub_ts   = a.get("datetime", 0)
         if not url_link or not headline:
             continue
+        if pub_ts and pub_ts < cutoff:
+            continue  # pre-midnight article leaked through date filter
         results.append({
             "headline":     headline,
             "source":       a.get("source", "Finnhub"),
             "url":          url_link,
             "summary":      (a.get("summary") or "")[:300],
-            "published_at": datetime.utcfromtimestamp(
-                a.get("datetime", 0)
-            ).strftime("%Y-%m-%d %H:%M UTC"),
+            "published_at": _et_time_str(pub_ts),
         })
 
-    return results
+    return results[:5]
 
 
 def fetch_analyst_actions(symbol: str) -> list[dict]:
@@ -234,26 +297,37 @@ def get_all_news(symbol: str, company_name: str) -> dict[str, Any]:
     Gather all news signals for a stock and return them as a single dict.
 
     Keys:
-      finnhub          — list of news articles
-      analyst_actions  — list of recommendation-period dicts
+      yahoo            — today's articles from Yahoo Finance (primary, fastest)
+      finnhub          — today's articles from Finnhub (secondary)
+      analyst_actions  — recommendation-period dicts
       price_target     — dict or None
-      sec_filings      — list of 8-K dicts
-      rss_mentions     — list of RSS article dicts
+      sec_filings      — 8-K dicts
+      rss_mentions     — RSS fallback (only if yahoo + finnhub return nothing)
     """
     logger.debug(f"Fetching news for {symbol} ({company_name})")
+    yahoo   = fetch_yahoo_news(symbol)
+    finnhub = fetch_finnhub_news(symbol)
+
+    # Only hit slow RSS feeds if the faster sources found nothing
+    rss = []
+    if not yahoo and not finnhub:
+        rss = fetch_rss_mentions(symbol, company_name)
+
     return {
-        "finnhub":         fetch_finnhub_news(symbol),
+        "yahoo":           yahoo,
+        "finnhub":         finnhub,
         "analyst_actions": fetch_analyst_actions(symbol),
         "price_target":    fetch_price_target(symbol),
         "sec_filings":     fetch_sec_filings(symbol),
-        "rss_mentions":    fetch_rss_mentions(symbol, company_name),
+        "rss_mentions":    rss,
     }
 
 
 def has_supporting_news(news: dict) -> bool:
     """Return True if at least one news source returned results."""
     return bool(
-        news.get("finnhub")
+        news.get("yahoo")
+        or news.get("finnhub")
         or news.get("rss_mentions")
         or news.get("sec_filings")
     )

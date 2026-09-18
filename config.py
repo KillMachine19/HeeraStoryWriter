@@ -31,9 +31,6 @@ RSS_FEEDS: dict[str, str] = {
     "Investing.com": "https://www.investing.com/rss/news.rss",
 }
 
-# ── News lookback: how far back (hours) to search for supporting news ─────────
-NEWS_LOOKBACK_HOURS: int = 24
-
 # ── Watchlist — fixed universe tracked every scan cycle ──────────────────────
 # No ±2% threshold for this list; any news or notable move is flagged.
 WATCHLIST: dict[str, list[str]] = {

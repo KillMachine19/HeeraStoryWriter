@@ -106,18 +106,32 @@ def send_stock_alert(stock: dict[str, Any], news: dict[str, Any]) -> None:
         "",
     ]
 
-    # ── News headlines ──────────────────────────────────────────────────────
-    top_news = (news.get("finnhub") or [])[:2] + (news.get("rss_mentions") or [])[:1]
+    # ── News headlines (Yahoo first — fastest & most current) ──────────────
+    # Merge Yahoo + Finnhub; deduplicate by URL; show publish time
+    seen_urls: set[str] = set()
+    top_news: list[dict] = []
+    for article in (news.get("yahoo") or []) + (news.get("finnhub") or []) + (news.get("rss_mentions") or []):
+        u = article.get("url", "")
+        if u and u in seen_urls:
+            continue
+        if u:
+            seen_urls.add(u)
+        top_news.append(article)
+        if len(top_news) == 3:
+            break
+
     if top_news:
-        lines.append("📰 *News:*")
-        for item in top_news[:3]:
-            headline = _esc(item.get("headline", "")[:90])
-            url      = item.get("url", "")
-            source   = _esc(item.get("source", ""))
+        lines.append("📰 *Today's News:*")
+        for item in top_news:
+            headline  = _esc(item.get("headline", "")[:90])
+            url       = item.get("url", "")
+            source    = _esc(item.get("source", ""))
+            pub_time  = _esc(item.get("published_at", ""))
+            time_tag  = f" _{pub_time}_" if pub_time else ""
             if url:
-                lines.append(f"• [{headline}]({url}) _\\({source}\\)_")
+                lines.append(f"• [{headline}]({url}) _\\({source}\\)_{time_tag}")
             else:
-                lines.append(f"• {headline} _\\({source}\\)_")
+                lines.append(f"• {headline} _\\({source}\\)_{time_tag}")
         lines.append("")
 
     # ── SEC filing ──────────────────────────────────────────────────────────
@@ -148,7 +162,7 @@ def send_stock_alert(stock: dict[str, Any], news: dict[str, Any]) -> None:
         )
 
     # ── No news fallback ───────────────────────────────────────────────────
-    has_any = top_news or sec or recs
+    has_any = top_news or sec or recs or news.get("yahoo")
     if not has_any:
         lines.append("⚠️ _No supporting news found in monitored sources\\. Verify on Bloomberg/Reuters manually\\._")
 
@@ -225,10 +239,12 @@ def send_watchlist_sector_update(sector: str, items: list[dict]) -> None:
             headline = _esc(article.get("headline", "")[:85])
             url      = article.get("url", "")
             source   = _esc(article.get("source", ""))
+            pub_time = _esc(article.get("published_at", ""))
+            time_tag = f" _{pub_time}_" if pub_time else ""
             if url:
-                lines.append(f"  • [{headline}]({url}) _\\({source}\\)_")
+                lines.append(f"  • [{headline}]({url}) _\\({source}\\)_{time_tag}")
             else:
-                lines.append(f"  • {headline} _\\({source}\\)_")
+                lines.append(f"  • {headline} _\\({source}\\)_{time_tag}")
 
         lines.append("")
 

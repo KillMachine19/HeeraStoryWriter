@@ -291,8 +291,18 @@ def _stock_section(pdf: MarketReport, symbol: str, data: dict, session_key: str)
     pdf.ln(2)
     pdf.divider()
 
-    # ── News & catalyst (top 3) ───────────────────────────────────────────
-    all_news = ((news.get("finnhub") or [])[:2] + (news.get("rss_mentions") or [])[:1])
+    # ── News & catalyst (top 3) — Yahoo first (fastest), then Finnhub ────
+    seen_urls_pdf: set[str] = set()
+    all_news: list[dict] = []
+    for a in (news.get("yahoo") or []) + (news.get("finnhub") or []) + (news.get("rss_mentions") or []):
+        u = a.get("url", "")
+        if u and u in seen_urls_pdf:
+            continue
+        if u:
+            seen_urls_pdf.add(u)
+        all_news.append(a)
+        if len(all_news) == 3:
+            break
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(*_ACCENT)
     pdf.cell(0, 5, "NEWS / CATALYST", ln=True)
@@ -301,16 +311,19 @@ def _stock_section(pdf: MarketReport, symbol: str, data: dict, session_key: str)
         for item in all_news[:3]:
             headline = _s((item.get("headline") or "")[:95])
             source   = _s(item.get("source", ""))
+            pub_time = _s(item.get("published_at", ""))
             url      = item.get("url", "")
             pdf.set_font("Helvetica", "B", 7.5)
             pdf.set_text_color(*_BLACK)
             pdf.cell(0, 4.5, f"* {headline}", ln=True)
             pdf.set_font("Helvetica", "", 7)
             pdf.set_text_color(*_GRAY)
-            line = f"  {source}"
+            meta = source
+            if pub_time:
+                meta += f"  {pub_time}"
             if url:
-                line += f"  -  {url[:65]}"
-            pdf.cell(0, 3.5, _s(line), ln=True)
+                meta += f"  -  {url[:60]}"
+            pdf.cell(0, 3.5, _s(f"  {meta}"), ln=True)
             pdf.ln(0.5)
     else:
         pdf.set_font("Helvetica", "I", 7.5)
