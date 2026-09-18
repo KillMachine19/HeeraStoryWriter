@@ -233,18 +233,24 @@ def send_watchlist_sector_update(sector: str, items: list[dict]) -> None:
         arrow = "🟢" if pct >= 0 else "🔴"
         move  = f"{pct:+.2f}%" if abs(pct) >= 0.1 else "—"
 
-        lines.append(f"{arrow} *{_esc(sym)}*  {_esc(move)}  \\$\\${_esc(str(price))}")
+        yf_url = f"https://finance.yahoo.com/quote/{sym}/news"
+        lines.append(f"{arrow} *[{_esc(sym)}]({yf_url})*  {_esc(move)}  \\${_esc(str(price))}")
 
-        for article in item.get("news", [])[:2]:
-            headline = _esc(article.get("headline", "")[:85])
-            url      = article.get("url", "")
-            source   = _esc(article.get("source", ""))
-            pub_time = _esc(article.get("published_at", ""))
-            time_tag = f" _{pub_time}_" if pub_time else ""
-            if url:
-                lines.append(f"  • [{headline}]({url}) _\\({source}\\)_{time_tag}")
-            else:
-                lines.append(f"  • {headline} _\\({source}\\)_{time_tag}")
+        articles = item.get("news", [])
+        if articles:
+            for article in articles[:2]:
+                headline = _esc(article.get("headline", "")[:85])
+                url      = article.get("url", "")
+                source   = _esc(article.get("source", ""))
+                pub_time = _esc(article.get("published_at", ""))
+                time_tag = f" _{pub_time}_" if pub_time else ""
+                if url:
+                    lines.append(f"  • [{headline}]({url}) _\\({source}\\)_{time_tag}")
+                else:
+                    lines.append(f"  • {headline} _\\({source}\\)_{time_tag}")
+        else:
+            # Notable move but no news found today — link to Yahoo Finance for manual check
+            lines.append(f"  _No news found today — [check Yahoo Finance]({yf_url})_")
 
         lines.append("")
 
