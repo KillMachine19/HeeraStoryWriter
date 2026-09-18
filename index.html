@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heera Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ── */
+:root {
+  --bg:          #edf2fb;
+  --surface:     #ffffff;
+  --surface-2:   #f0f5ff;
+  --border:      #c8d5e8;
+  --text:        #0c1d33;
+  --muted:       #5a7598;
+  --green:       #0baa73;
+  --green-soft:  #d1fae9;
+  --red:         #d63b3b;
+  --red-soft:    #fde8e8;
+  --accent:      #2563eb;
+  --accent-soft: #dbeafe;
+  --mono:        'IBM Plex Mono', 'Cascadia Code', monospace;
+  --sans:        'IBM Plex Sans', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #07101e;
+    --surface:     #0d1929;
+    --surface-2:   #122035;
+    --border:      #1c2f48;
+    --text:        #b8cfe8;
+    --muted:       #3a567a;
+    --green:       #20c48a;
+    --green-soft:  #082e1c;
+    --red:         #f05252;
+    --red-soft:    #2c0d0d;
+    --accent:      #4d8eff;
+    --accent-soft: #0f2448;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:          #07101e;
+  --surface:     #0d1929;
+  --surface-2:   #122035;
+  --border:      #1c2f48;
+  --text:        #b8cfe8;
+  --muted:       #3a567a;
+  --green:       #20c48a;
+  --green-soft:  #082e1c;
+  --red:         #f05252;
+  --red-soft:    #2c0d0d;
+  --accent:      #4d8eff;
+  --accent-soft: #0f2448;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.hdr {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.hdr-brand {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.hdr-sep { color: var(--border); font-size: 16px; user-select: none; }
+.session-pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.hdr-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.hdr-cycle { font-size: 12px; color: var(--muted); }
+.hdr-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.countdown-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.countdown-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  min-width: 36px;
+}
+.theme-btn, .manual-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-family: var(--sans);
+  cursor: pointer;
+  line-height: 1;
+}
+.theme-btn:hover, .manual-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Stats bar ── */
+.stats-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.stat { display: flex; align-items: center; gap: 6px; }
+.stat-val {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+.stat-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-dot { animation: none; }
+}
+.stat-dot.inactive { background: var(--border); animation: none; }
+
+/* ── Main layout ── */
+.main {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+/* ── Section labels ── */
+.section-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ── Sector tabs ── */
+.sector-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.s-tab {
+  font-size: 12px;
+  font-weight: 500;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  padding: 5px 13px;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.s-tab:hover { border-color: var(--accent); color: var(--accent); }
+.s-tab.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Stock rows ── */
+.stock-list { min-height: 200px; }
+.stock-row {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.stock-row:last-child { border-bottom: none; }
+.stock-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.move-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.move-dot.up   { background: var(--green); }
+.move-dot.down { background: var(--red); }
+.move-dot.flat { background: var(--border); }
+
+.s-ticker {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--accent);
+  min-width: 52px;
+  text-decoration: none;
+}
+.s-ticker:hover { text-decoration: underline; }
+.s-price {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 58px;
+  font-variant-numeric: tabular-nums;
+}
+.pct {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: right;
+}
+.pct.up   { background: var(--green-soft); color: var(--green); }
+.pct.down { background: var(--red-soft);   color: var(--red); }
+.pct.flat { background: var(--surface-2);  color: var(--muted); }
+
+.s-news { margin-top: 3px; padding-left: 66px; }
+.news-hl {
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.news-hl a:hover { text-decoration: underline; color: var(--accent); }
+.news-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.no-news { font-size: 11px; color: var(--muted); }
+.no-news a { color: var(--accent); }
+.no-news a:hover { text-decoration: underline; }
+
+/* ── Screener alert cards ── */
+.alert-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 13px 14px;
+  margin-bottom: 8px;
+}
+.alert-card:last-child { margin-bottom: 0; }
+.a-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.a-ticker {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+.a-ticker:hover { color: var(--accent); }
+.a-pct {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 15px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.a-pct.up   { color: var(--green); }
+.a-pct.down { color: var(--red); }
+.a-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.a-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.a-sess {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--surface-2);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.a-price {
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.a-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 0 8px;
+}
+.a-article { margin-bottom: 7px; }
+.a-article:last-child { margin-bottom: 0; }
+.a-hl {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.a-hl:hover { color: var(--accent); text-decoration: underline; }
+.a-src {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* ── States ── */
+.empty-state {
+  padding: 36px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+.spin {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* ── Responsive gutter ── */
+@media (max-width: 600px) {
+  .hdr { padding: 0 16px; gap: 10px; }
+  .hdr-cycle, .hdr-time { display: none; }
+  .stats-bar { padding: 0 16px; gap: 16px; overflow-x: auto; }
+  .main { padding: 16px; }
+  .s-price { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="hdr">
+  <span class="hdr-brand">▸ HEERA</span>
+  <span class="hdr-sep">|</span>
+  <span class="session-pill" id="session-pill">—</span>
+  <span class="hdr-time" id="hdr-time">—</span>
+  <span class="hdr-cycle" id="hdr-cycle"></span>
+  <div class="hdr-right">
+    <div class="countdown-wrap">
+      <span>Next scan</span>
+      <span class="countdown-val" id="countdown">—</span>
+    </div>
+    <button class="manual-btn" onclick="loadData()">↻ Refresh</button>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">◐</button>
+  </div>
+</header>
+
+<!-- ── Stats bar ── -->
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-dot inactive" id="live-dot"></span>
+    <span id="stat-date">—</span>
+  </div>
+  <div class="stat">
+    <span>Watchlist</span>
+    <span class="stat-val" id="stat-wl">—</span>
+  </div>
+  <div class="stat">
+    <span>Alerts today</span>
+    <span class="stat-val" id="stat-al">—</span>
+  </div>
+  <div class="stat">
+    <span>Sectors</span>
+    <span class="stat-val" id="stat-sec">—</span>
+  </div>
+</div>
+
+<!-- ── Content ── -->
+<main class="main" id="main">
+  <!-- Watchlist panel -->
+  <section id="wl-panel">
+    <div class="section-lbl">Watchlist Universe</div>
+    <div class="sector-tabs" id="sector-tabs"></div>
+    <div class="stock-list" id="stock-list">
+      <div class="empty-state">
+        <div class="spin"></div>
+        Loading scan data…
+      </div>
+    </div>
+  </section>
+
+  <!-- Screener panel -->
+  <section id="sc-panel">
+    <div class="section-lbl">Screener Alerts · Today</div>
+    <div id="alerts-list">
+      <div class="empty-state" style="padding-top:24px">
+        Waiting for data…
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const DATA_URL = "https://raw.githubusercontent.com/KillMachine19/HeeraStoryWriter/main/data/latest.json";
+const SECTOR_EMOJI = { Space:"🚀", Pharma:"💊", Biotech:"🧬", Consumer:"🛍️" };
+const REFRESH_MS = 10 * 60 * 1000;
+
+let cache = null;
+let activeSector = null;
+let countdownTimer = null;
+let nextAt = null;
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+const esc = s => String(s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+function pctClass(v) {
+  if (v >  0.09) return "up";
+  if (v < -0.09) return "down";
+  return "flat";
+}
+
+function pctStr(v) {
+  const s = v >= 0 ? "+" : "";
+  return `${s}${Number(v).toFixed(2)}%`;
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch(`${DATA_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    cache = data;
+    render(data);
+  } catch(e) {
+    if (!cache) renderError(e.message);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(d) {
+  const meta = d.meta || {};
+  const wl   = d.watchlist || {};
+  const sc   = d.screener  || [];
+
+  renderHeader(meta);
+  renderStats(meta, wl, sc);
+  renderSectorTabs(wl);
+  renderScreener(sc);
+}
+
+function renderHeader(meta) {
+  const isLive = meta.session && meta.scan_iso;
+
+  // Session pill
+  const labels = { pre_market:"Pre-Market", market_hours:"Market Hours", post_market:"Post-Market" };
+  document.getElementById("session-pill").textContent = labels[meta.session] || "—";
+
+  document.getElementById("hdr-time").textContent  = meta.scan_time || "—";
+  document.getElementById("hdr-cycle").textContent = meta.cycle ? `· Cycle #${meta.cycle}` : "";
+  document.getElementById("stat-date").textContent  = meta.date   || "—";
+
+  // Live indicator
+  const dot = document.getElementById("live-dot");
+  dot.className = "stat-dot" + (isLive ? "" : " inactive");
+
+  // Countdown
+  if (countdownTimer) clearInterval(countdownTimer);
+  if (meta.scan_iso) {
+    nextAt = new Date(new Date(meta.scan_iso).getTime() + REFRESH_MS);
+    countdownTimer = setInterval(tickCountdown, 1000);
+    tickCountdown();
+  } else {
+    document.getElementById("countdown").textContent = "—";
+  }
+}
+
+function tickCountdown() {
+  const diff = nextAt - Date.now();
+  if (diff <= 0) {
+    document.getElementById("countdown").textContent = "scanning…";
+    clearInterval(countdownTimer);
+    setTimeout(loadData, 8000); // give GH Actions time to push
+    return;
+  }
+  const m = Math.floor(diff / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById("countdown").textContent = `${m}:${s.toString().padStart(2,"0")}`;
+}
+
+function renderStats(meta, wl, sc) {
+  const wlCount  = Object.values(wl).reduce((n,a) => n + a.length, 0);
+  const secCount = Object.keys(wl).length;
+  document.getElementById("stat-wl").textContent  = wlCount  || "—";
+  document.getElementById("stat-al").textContent  = sc.length || "0";
+  document.getElementById("stat-sec").textContent = secCount  || "—";
+}
+
+// ── Watchlist ─────────────────────────────────────────────────────────────────
+function renderSectorTabs(wl) {
+  const sectors = Object.keys(wl);
+  if (!sectors.length) {
+    document.getElementById("sector-tabs").innerHTML = "";
+    document.getElementById("stock-list").innerHTML =
+      `<div class="empty-state">Waiting for first scan to complete.</div>`;
+    return;
+  }
+
+  if (!activeSector || !sectors.includes(activeSector)) activeSector = sectors[0];
+
+  document.getElementById("sector-tabs").innerHTML = sectors.map(s => `
+    <button class="s-tab${s === activeSector ? " active" : ""}"
+            onclick="switchSector('${esc(s)}')">${SECTOR_EMOJI[s] || "📌"} ${esc(s)}</button>
+  `).join("");
+
+  renderStockList(wl[activeSector] || []);
+}
+
+function switchSector(s) {
+  activeSector = s;
+  document.querySelectorAll(".s-tab").forEach(t => {
+    t.classList.toggle("active", t.textContent.trim().startsWith(SECTOR_EMOJI[s]) ||
+      t.textContent.trim().includes(s));
+  });
+  if (cache) renderStockList(cache.watchlist[s] || []);
+}
+
+function renderStockList(stocks) {
+  if (!stocks.length) {
+    document.getElementById("stock-list").innerHTML =
+      `<div class="empty-state">No data for this sector.</div>`;
+    return;
+  }
+
+  document.getElementById("stock-list").innerHTML = stocks.map(st => {
+    const cls    = pctClass(st.pct);
+    const yf     = `https://finance.yahoo.com/quote/${esc(st.symbol)}/news`;
+    const pLabel = pctStr(st.pct);
+    const dotCls = cls === "flat" ? "flat" : cls;
+
+    // News: first article only in the row
+    let newsHtml;
+    if (st.news && st.news.length) {
+      const a = st.news[0];
+      const hl = esc((a.headline || "").slice(0, 92));
+      const src = esc(a.source || "");
+      const t   = a.time ? ` · <span>${esc(a.time)}</span>` : "";
+      newsHtml = `<div class="news-hl">
+        <a href="${esc(a.url || yf)}" target="_blank" rel="noopener">${hl}</a>
+        <span class="news-meta"> · ${src}${t}</span>
+      </div>`;
+    } else {
+      newsHtml = `<div class="no-news">
+        <a href="${yf}" target="_blank" rel="noopener">No news today — check Yahoo Finance →</a>
+      </div>`;
+    }
+
+    return `<div class="stock-row">
+      <div class="stock-main">
+        <span class="move-dot ${dotCls}"></span>
+        <a class="s-ticker" href="${yf}" target="_blank" rel="noopener">${esc(st.symbol)}</a>
+        <span class="s-price">$${Number(st.price).toFixed(2)}</span>
+        <span class="pct ${cls}">${pLabel}</span>
+      </div>
+      <div class="s-news">${newsHtml}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Screener ──────────────────────────────────────────────────────────────────
+function renderScreener(alerts) {
+  const el = document.getElementById("alerts-list");
+  if (!alerts.length) {
+    el.innerHTML = `<div class="empty-state">
+      No screener alerts yet today.<br>
+      ±2% movers will appear here.
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = alerts.slice(0, 25).map(a => {
+    const cls    = pctClass(a.pct);
+    const yf     = `https://finance.yahoo.com/quote/${esc(a.symbol)}/news`;
+    const sessLbl = a.session === "pre_market" ? "Pre" : "Mkt";
+
+    let artHtml = "";
+    if (a.articles && a.articles.length) {
+      artHtml = `<hr class="a-divider">` + a.articles.map(art => `
+        <div class="a-article">
+          <a class="a-hl" href="${esc(art.url || yf)}" target="_blank" rel="noopener">
+            ${esc((art.headline || "").slice(0, 100))}
+          </a>
+          <div class="a-src">${esc(art.source || "")}${art.time ? " · " + esc(art.time) : ""}</div>
+        </div>`).join("");
+    }
+
+    return `<div class="alert-card">
+      <div class="a-top">
+        <a class="a-ticker" href="${yf}" target="_blank" rel="noopener">${esc(a.symbol)}</a>
+        <span class="a-pct ${cls}">${pctStr(a.pct)}</span>
+      </div>
+      <div class="a-sub">
+        <span class="a-name">${esc((a.name || a.symbol).slice(0, 30))}</span>
+        <span class="a-sess">${sessLbl}</span>
+        <span class="a-price">$${Number(a.price).toFixed(2)}</span>
+      </div>
+      ${artHtml}
+    </div>`;
+  }).join("");
+}
+
+function renderError(msg) {
+  document.getElementById("stock-list").innerHTML =
+  document.getElementById("alerts-list").innerHTML = `
+    <div class="empty-state">
+      ⚠ Could not load data.<br>
+      <small style="font-size:11px;color:var(--muted)">${esc(msg || "Waiting for first scan.")}</small>
+    </div>`;
+}
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const root = document.documentElement;
+  const cur  = root.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  try { localStorage.setItem("heera-theme", next); } catch(e) {}
+}
+
+(function applyStoredTheme() {
+  try {
+    const t = localStorage.getItem("heera-theme");
+    if (t) document.documentElement.setAttribute("data-theme", t);
+  } catch(e) {}
+})();
+
+// ── Expose globals ────────────────────────────────────────────────────────────
+window.switchSector = switchSector;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

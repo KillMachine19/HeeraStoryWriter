@@ -132,3 +132,88 @@ def save_watchlist_results(results: dict) -> None:
 def get_watchlist_results() -> dict:
     """Retrieve the cached watchlist results (empty dict if not yet scanned)."""
     return load_state().get("_watchlist", {})
+
+
+# ── Public dashboard data ─────────────────────────────────────────────────────
+
+def write_public_data(session: str, cycle: int) -> None:
+    """
+    Write a clean JSON snapshot to data/latest.json for the GitHub Pages
+    dashboard.  Reads from today's state file — no extra API calls.
+    """
+    import pytz
+    from datetime import datetime
+
+    state = load_state()
+    ET    = pytz.timezone("America/New_York")
+    now   = datetime.now(ET)
+
+    def _clean_articles(raw_list: list, limit: int = 3) -> list[dict]:
+        seen: set[str] = set()
+        out: list[dict] = []
+        for a in raw_list:
+            u = a.get("url", "")
+            if u and u in seen:
+                continue
+            if u:
+                seen.add(u)
+            out.append({
+                "headline": a.get("headline", ""),
+                "source":   a.get("source", ""),
+                "url":      u,
+                "time":     a.get("published_at", ""),
+            })
+            if len(out) == limit:
+                break
+        return out
+
+    # ── Screener alerts ───────────────────────────────────────────────────
+    screener: list[dict] = []
+    for sess_key in ("pre_market", "market_hours"):
+        for symbol, entry in state.get(sess_key, {}).items():
+            raw_news = entry.get("_news", {})
+            articles = _clean_articles(
+                (raw_news.get("yahoo") or []) + (raw_news.get("finnhub") or [])
+            )
+            screener.append({
+                "symbol":   symbol,
+                "name":     entry.get("name", symbol),
+                "pct":      entry.get("pct_change", 0),
+                "price":    entry.get("current_price", 0),
+                "session":  sess_key,
+                "articles": articles,
+            })
+    screener.sort(key=lambda x: abs(x["pct"]), reverse=True)
+
+    # ── Watchlist ─────────────────────────────────────────────────────────
+    watchlist: dict[str, list] = {}
+    for sector, items in state.get("_watchlist", {}).items():
+        watchlist[sector] = [
+            {
+                "symbol":  item["symbol"],
+                "price":   item.get("current_price", 0),
+                "pct":     item.get("pct_change", 0),
+                "notable": item.get("has_notable_move", False),
+                "news":    _clean_articles(item.get("news", []), limit=2),
+            }
+            for item in items
+        ]
+
+    data = {
+        "meta": {
+            "scan_time": now.strftime("%-I:%M %p ET"),
+            "scan_iso":  now.isoformat(),
+            "date":      now.strftime("%b %d, %Y"),
+            "session":   session,
+            "cycle":     cycle,
+        },
+        "watchlist": watchlist,
+        "screener":  screener,
+    }
+
+    out_dir = Path("data")
+    out_dir.mkdir(exist_ok=True)
+    with open(out_dir / "latest.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, default=str)
+
+    logger.info("Dashboard data written → data/latest.json")

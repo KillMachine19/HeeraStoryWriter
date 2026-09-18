@@ -41,6 +41,7 @@ from state.state_manager import (
     mark_session_started,
     save_seen_news_urls,
     save_watchlist_results,
+    write_public_data,
 )
 from utils.logger import get_logger
 from utils.market_hours import get_market_session, session_label
@@ -218,6 +219,7 @@ def _run_once(session: str) -> None:
 
     run_watchlist_scan(session)
     run_scan(session)
+    write_public_data(session, cycle_num)
 
 
 def main() -> None:

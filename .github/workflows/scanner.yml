@@ -68,3 +68,18 @@ jobs:
           else
             python main.py
           fi
+
+      # ── Publish dashboard data ────────────────────────────────────────────────
+      # Commits data/latest.json back to the repo so GitHub Pages can serve it.
+      # Uses GITHUB_TOKEN (auto-provided, no secret needed).
+      - name: Publish dashboard data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          if git diff --cached --quiet; then
+            echo "No changes to data/latest.json — skipping commit"
+          else
+            git commit -m "chore: update dashboard data [skip ci]"
+            git push
+          fi
