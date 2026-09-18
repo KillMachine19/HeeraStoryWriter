@@ -22,6 +22,7 @@ from config import FINNHUB_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, WAT
 from notifications.telegram_bot import (
     send_stock_alert,
     send_session_start,
+    send_cycle_divider,
     send_pdf_report,
     send_watchlist_sector_update,
     send_watchlist_quiet,
@@ -33,6 +34,7 @@ from scanner.watchlist_scanner import build_watchlist_results
 from state.state_manager import (
     get_all_flagged_today,
     get_seen_news_urls,
+    increment_cycle,
     is_already_notified,
     is_session_started,
     mark_notified,
@@ -197,10 +199,30 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip scanning; generate and send the post-market PDF immediately",
     )
+    p.add_argument(
+        "--loop",
+        action="store_true",
+        help="Run continuously every 10 minutes (for local testing without GitHub Actions)",
+    )
     return p.parse_args()
 
 
+def _run_once(session: str) -> None:
+    """Execute one full scan cycle for the given session."""
+    if not is_session_started(session):
+        send_session_start(session)
+        mark_session_started(session)
+
+    cycle_num = increment_cycle(session)
+    send_cycle_divider(session, cycle_num)
+
+    run_watchlist_scan(session)
+    run_scan(session)
+
+
 def main() -> None:
+    import time as _time
+
     args = _parse_args()
 
     if not _check_config():
@@ -211,7 +233,22 @@ def main() -> None:
         run_post_market()
         return
 
-    # ── Determine session ──────────────────────────────────────────────────
+    # ── Loop mode (local testing) — runs every 10 min until Ctrl-C ────────
+    if args.loop:
+        session = args.force_session
+        logger.info("Loop mode: running every 10 minutes. Press Ctrl-C to stop.")
+        while True:
+            current = session or get_market_session()
+            if current is None:
+                logger.info("Outside market hours — waiting 10 minutes")
+            elif current == "post_market":
+                run_post_market()
+            else:
+                _run_once(current)
+            logger.info("Sleeping 10 minutes until next cycle …")
+            _time.sleep(600)
+
+    # ── Single run (GitHub Actions / manual) ──────────────────────────────
     session = args.force_session or get_market_session()
 
     if session is None:
@@ -222,16 +259,7 @@ def main() -> None:
         run_post_market()
         return
 
-    # ── One-time session startup message ──────────────────────────────────
-    if not is_session_started(session):
-        send_session_start(session)
-        mark_session_started(session)
-
-    # ── Watchlist scan (every cycle) ───────────────────────────────────────
-    run_watchlist_scan(session)
-
-    # ── Screener movers scan ───────────────────────────────────────────────
-    run_scan(session)
+    _run_once(session)
 
 
 if __name__ == "__main__":

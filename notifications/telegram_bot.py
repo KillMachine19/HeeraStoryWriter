@@ -170,6 +170,20 @@ def send_stock_alert(stock: dict[str, Any], news: dict[str, Any]) -> None:
     logger.info(f"Alert sent: {symbol} {pct:+.2f}%")
 
 
+def send_cycle_divider(session: str, cycle_num: int | None = None) -> None:
+    """
+    Compact one-line divider sent at the start of every 10-minute scan cycle.
+    Gives the channel a clear visual boundary between runs.
+    """
+    import pytz
+    from datetime import datetime
+    ET = pytz.timezone("America/New_York")
+    time_str = datetime.now(ET).strftime("%I:%M %p ET").lstrip("0")
+    label = session_label(session)
+    num_tag = f" \\#{_esc(str(cycle_num))}" if cycle_num else ""
+    _send_message(f"🔄 *{_esc(time_str)} — {_esc(label)}{num_tag}*")
+
+
 def send_session_start(session: str) -> None:
     """
     Startup text sent ONCE at the beginning of each trading session.
