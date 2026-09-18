@@ -55,8 +55,8 @@ def _s(text) -> str:
     t = unicodedata.normalize("NFKD", t)
     return t.encode("latin-1", errors="replace").decode("latin-1")
 
-from config import PDF_OUTPUT_DIR, STATE_DIR
-from state.state_manager import get_all_flagged_today
+from config import PDF_OUTPUT_DIR, STATE_DIR, WATCHLIST
+from state.state_manager import get_all_flagged_today, get_watchlist_results
 from utils.logger import get_logger
 from utils.market_hours import session_label
 
@@ -422,6 +422,84 @@ def _build_story_angles(symbol: str, data: dict, news: dict, session_key: str) -
     return angles
 
 
+# ── Watchlist section ─────────────────────────────────────────────────────────
+
+_SECTOR_EMOJI = {"Space": "Rocket", "Pharma": "Pharma", "Biotech": "Biotech", "Consumer": "Consumer"}
+
+
+def _watchlist_section(pdf: MarketReport, watchlist_results: dict) -> None:
+    """
+    Watchlist universe section — always included in the PDF.
+    Organized by sector; stocks with news/notable moves shown in detail.
+    Quiet sectors get a single "no new developments" line.
+    """
+    pdf.add_page()
+    pdf.h1("Watchlist Universe", color=_ACCENT)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(*_GRAY)
+    pdf.cell(0, 5, "Fixed universe — Space / Pharma / Biotech / Consumer. No 2% threshold.", ln=True)
+    pdf.ln(2)
+    pdf.divider()
+
+    for sector in WATCHLIST:
+        items = watchlist_results.get(sector, [])
+
+        # ── Sector header ─────────────────────────────────────────────────
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(*_ACCENT)
+        pdf.cell(0, 6, _s(f"{sector} Sector"), ln=True)
+
+        active = [i for i in items if i.get("has_news") or i.get("has_notable_move")]
+
+        if not active:
+            pdf.set_font("Helvetica", "I", 8)
+            pdf.set_text_color(*_GRAY)
+            pdf.cell(0, 5, "  No new developments today.", ln=True)
+            pdf.ln(2)
+            continue
+
+        for item in active:
+            if pdf.get_y() > 250:
+                pdf.add_page()
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_text_color(*_ACCENT)
+                pdf.cell(0, 6, _s(f"{sector} Sector (continued)"), ln=True)
+
+            sym   = item["symbol"]
+            pct   = item.get("pct_change", 0)
+            price = item.get("current_price", 0)
+            color = _GREEN if pct >= 0 else _RED
+            arrow = "+" if pct >= 0 else ""
+
+            # Symbol + move on one line
+            pdf.set_font("Helvetica", "B", 8.5)
+            pdf.set_text_color(*_BLACK)
+            pdf.cell(22, 5, _s(sym))
+            pdf.set_text_color(*color)
+            pdf.cell(22, 5, _s(f"{arrow}{pct:.2f}%"))
+            pdf.set_text_color(*_GRAY)
+            pdf.set_font("Helvetica", "", 7.5)
+            pdf.cell(0, 5, _s(f"${price}"), ln=True)
+
+            # News headlines
+            for article in item.get("news", [])[:2]:
+                headline = _s((article.get("headline") or "")[:90])
+                source   = _s(article.get("source", ""))
+                url      = article.get("url", "")
+                pdf.set_font("Helvetica", "", 7)
+                pdf.set_text_color(*_BLACK)
+                pdf.cell(0, 4, f"  * {headline}", ln=True)
+                pdf.set_text_color(*_GRAY)
+                line = f"    {source}"
+                if url:
+                    line += f"  -  {url[:60]}"
+                pdf.cell(0, 3.5, _s(line), ln=True)
+
+            pdf.ln(1.5)
+
+        pdf.ln(2)
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def generate_pdf() -> str | None:
@@ -430,10 +508,14 @@ def generate_pdf() -> str | None:
     News is read directly from each state entry's '_news' key,
     which was stored by mark_notified() during the scan — no API calls here.
     """
-    state = get_all_flagged_today()
-    total_stocks = sum(len(v) for v in state.values())
+    state            = get_all_flagged_today()
+    watchlist_results = get_watchlist_results()
+    screener_stocks  = {k: v for k, v in state.items() if not k.startswith("_")}
+    total_stocks     = sum(len(v) for v in screener_stocks.values())
 
-    if total_stocks == 0:
+    # Generate PDF even when only watchlist has data
+    has_watchlist = bool(watchlist_results)
+    if total_stocks == 0 and not has_watchlist:
         logger.info("No stocks flagged today — skipping PDF generation")
         return None
 
@@ -444,10 +526,15 @@ def generate_pdf() -> str | None:
     pdf = MarketReport(report_date=today_et)
 
     _cover(pdf, state)
-    _summary_table(pdf, state)
+    if total_stocks:
+        _summary_table(pdf, state)
+
+    # Watchlist section first — always included when scan has run
+    if has_watchlist:
+        _watchlist_section(pdf, watchlist_results)
 
     for session_key in ("pre_market", "market_hours"):
-        stocks = state.get(session_key, {})
+        stocks = screener_stocks.get(session_key, {})
         if not stocks:
             continue
         pdf.add_page()

@@ -156,15 +156,89 @@ def send_stock_alert(stock: dict[str, Any], news: dict[str, Any]) -> None:
     logger.info(f"Alert sent: {symbol} {pct:+.2f}%")
 
 
-def send_session_start(session: str, scan_count: int = 0) -> None:
-    """Broadcast a brief message when a new session begins."""
-    label = _esc(session_label(session))
-    msg = (
-        f"📡 *{label} Scanner Active*\n"
-        f"Monitoring ±{_esc(str(2))}%\\+ movers \\(market cap \\>${_esc('250M')}\\)\n"
-        f"Scan interval: every 10 minutes"
+def send_session_start(session: str) -> None:
+    """
+    Startup text sent ONCE at the beginning of each trading session.
+    Fires before any scan alerts so the channel always has a clear marker.
+    """
+    from config import WATCHLIST, WATCHLIST_ALL
+    from datetime import datetime
+    import pytz
+
+    ET     = pytz.timezone("America/New_York")
+    now_et = datetime.now(ET)
+    date_str = now_et.strftime("%B %d, %Y")
+    time_str = now_et.strftime("%I:%M %p ET")
+
+    session_windows = {
+        "pre_market":   "4:00 AM – 9:30 AM ET  \\(1:30 PM – 7:00 PM IST\\)",
+        "market_hours": "9:30 AM – 4:00 PM ET  \\(7:00 PM – 1:30 AM IST\\)",
+    }
+    window = session_windows.get(session, "")
+
+    sector_summary = "  ".join(
+        f"{_esc(sector)} \\({len(syms)}\\)"
+        for sector, syms in WATCHLIST.items()
     )
-    _send_message(msg)
+
+    lines = [
+        f"🚀 *HEERA SCANNER — {_esc(session_label(session).upper())}*",
+        f"📅 {_esc(date_str)}  \\|  Started {_esc(time_str)}",
+        f"⏱ {window}",
+        "",
+        f"*Watchlist:* {_esc(str(len(WATCHLIST_ALL)))} stocks",
+        f"_{sector_summary}_",
+        "",
+        "*Scanning for:*",
+        "• Watchlist — all news developments \\+ price moves \\(no threshold\\)",
+        "• Market movers — ±2%\\+ move, \\>\\$250M cap, US\\-listed",
+        "",
+        "Scan interval: every 10 minutes\\.  First results incoming\\.",
+    ]
+    _send_message("\n".join(lines))
+
+
+def send_watchlist_sector_update(sector: str, items: list[dict]) -> None:
+    """
+    Send a sector-grouped watchlist update to the channel.
+    Only stocks with news or notable moves are shown.
+    Stocks with neither are omitted; if the whole sector is quiet,
+    the caller should send a brief "quiet" note instead.
+    """
+    active = [i for i in items if i.get("has_news") or i.get("has_notable_move")]
+    if not active:
+        return
+
+    sector_emoji = {"Space": "🚀", "Pharma": "💊", "Biotech": "🧬", "Consumer": "🛍"}.get(sector, "📌")
+    lines = [f"{sector_emoji} *{_esc(sector)} Sector Update*", ""]
+
+    for item in active:
+        sym   = item["symbol"]
+        pct   = item.get("pct_change", 0)
+        price = item.get("current_price", 0)
+        arrow = "🟢" if pct >= 0 else "🔴"
+        move  = f"{pct:+.2f}%" if abs(pct) >= 0.1 else "—"
+
+        lines.append(f"{arrow} *{_esc(sym)}*  {_esc(move)}  \\$\\${_esc(str(price))}")
+
+        for article in item.get("news", [])[:2]:
+            headline = _esc(article.get("headline", "")[:85])
+            url      = article.get("url", "")
+            source   = _esc(article.get("source", ""))
+            if url:
+                lines.append(f"  • [{headline}]({url}) _\\({source}\\)_")
+            else:
+                lines.append(f"  • {headline} _\\({source}\\)_")
+
+        lines.append("")
+
+    _send_message("\n".join(lines))
+
+
+def send_watchlist_quiet(sector: str) -> None:
+    """Send a one-line 'no news' note for a quiet sector."""
+    emoji = {"Space": "🚀", "Pharma": "💊", "Biotech": "🧬", "Consumer": "🛍"}.get(sector, "📌")
+    _send_message(f"{emoji} *{_esc(sector)}* — No new developments this cycle\\.")
 
 
 def send_pdf_report(pdf_path: str, date_str: str, total_flagged: int) -> None:

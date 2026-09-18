@@ -18,15 +18,27 @@ import argparse
 import sys
 from datetime import datetime, timezone
 
-from config import FINNHUB_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID
-from notifications.telegram_bot import send_stock_alert, send_session_start, send_pdf_report
+from config import FINNHUB_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, WATCHLIST
+from notifications.telegram_bot import (
+    send_stock_alert,
+    send_session_start,
+    send_pdf_report,
+    send_watchlist_sector_update,
+    send_watchlist_quiet,
+)
 from reports.pdf_generator import generate_pdf
-from scanner.news_fetcher import get_all_news, has_supporting_news  # noqa: F401 (has_supporting_news used inline)
+from scanner.news_fetcher import get_all_news, has_supporting_news  # noqa: F401
 from scanner.price_scanner import enrich_and_filter, get_movers
+from scanner.watchlist_scanner import build_watchlist_results
 from state.state_manager import (
     get_all_flagged_today,
+    get_seen_news_urls,
     is_already_notified,
+    is_session_started,
     mark_notified,
+    mark_session_started,
+    save_seen_news_urls,
+    save_watchlist_results,
 )
 from utils.logger import get_logger
 from utils.market_hours import get_market_session, session_label
@@ -118,6 +130,32 @@ def run_scan(session: str) -> None:
     return news_cache
 
 
+# ── Watchlist scan ────────────────────────────────────────────────────────────
+
+def run_watchlist_scan(session: str) -> None:
+    """
+    Scan the fixed watchlist universe every cycle.
+    Results are grouped by sector and sent to Telegram.
+    Saves results to state for PDF inclusion.
+    """
+    logger.info("Watchlist scan starting")
+
+    seen_urls = get_seen_news_urls()
+    results   = build_watchlist_results(session, seen_urls)
+
+    for sector in WATCHLIST:
+        items = results.get(sector, [])
+        active = [i for i in items if i.get("has_news") or i.get("has_notable_move")]
+        if active:
+            send_watchlist_sector_update(sector, items)
+        else:
+            send_watchlist_quiet(sector)
+
+    save_watchlist_results(results)
+    save_seen_news_urls(seen_urls)
+    logger.info("Watchlist scan complete")
+
+
 # ── Post-market PDF ───────────────────────────────────────────────────────────
 
 def run_post_market() -> None:
@@ -133,7 +171,7 @@ def run_post_market() -> None:
 
     if pdf_path:
         state    = get_all_flagged_today()
-        total    = sum(len(v) for v in state.values())
+        total    = sum(len(v) for k, v in state.items() if not k.startswith("_"))
         date_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
         send_pdf_report(pdf_path, date_str=date_str, total_flagged=total)
     else:
@@ -184,7 +222,15 @@ def main() -> None:
         run_post_market()
         return
 
-    # ── Run scan ───────────────────────────────────────────────────────────
+    # ── One-time session startup message ──────────────────────────────────
+    if not is_session_started(session):
+        send_session_start(session)
+        mark_session_started(session)
+
+    # ── Watchlist scan (every cycle) ───────────────────────────────────────
+    run_watchlist_scan(session)
+
+    # ── Screener movers scan ───────────────────────────────────────────────
     run_scan(session)
 
 
