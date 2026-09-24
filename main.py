@@ -24,8 +24,7 @@ from notifications.telegram_bot import (
     send_session_start,
     send_cycle_divider,
     send_pdf_report,
-    send_watchlist_sector_update,
-    send_watchlist_quiet,
+    send_stock_card,
 )
 from reports.pdf_generator import generate_pdf
 from scanner.news_fetcher import get_all_news, has_supporting_news  # noqa: F401
@@ -137,26 +136,29 @@ def run_scan(session: str) -> None:
 
 def run_watchlist_scan(session: str) -> None:
     """
-    Scan the fixed watchlist universe every cycle.
-    Results are grouped by sector and sent to Telegram.
-    Saves results to state for PDF inclusion.
+    Scan the fixed watchlist universe every 35-minute cycle.
+    Sends an individual stock card for each flaggable stock.
+    Flagging criteria: market cap ≥$250M + (analyst/earnings/CEO signal OR
+    notable move with Stocktwits retail interest).
     """
     logger.info("Watchlist scan starting")
 
     seen_urls = get_seen_news_urls()
     results   = build_watchlist_results(session, seen_urls)
 
+    sent = 0
     for sector in WATCHLIST:
-        items = results.get(sector, [])
-        active = [i for i in items if i.get("has_news") or i.get("has_notable_move")]
-        if active:
-            send_watchlist_sector_update(sector, items)
-        else:
-            send_watchlist_quiet(sector)
+        for item in results.get(sector, []):
+            if item.get("flaggable"):
+                send_stock_card(item, session)
+                sent += 1
+
+    if sent == 0:
+        logger.info("Watchlist: nothing flaggable this cycle")
 
     save_watchlist_results(results)
     save_seen_news_urls(seen_urls)
-    logger.info("Watchlist scan complete")
+    logger.info(f"Watchlist scan complete — {sent} cards sent")
 
 
 # ── Post-market PDF ───────────────────────────────────────────────────────────
@@ -247,8 +249,8 @@ def main() -> None:
                 run_post_market()
             else:
                 _run_once(current)
-            logger.info("Sleeping 10 minutes until next cycle …")
-            _time.sleep(600)
+            logger.info("Sleeping 35 minutes until next cycle …")
+            _time.sleep(2100)
 
     # ── Single run (GitHub Actions / manual) ──────────────────────────────
     session = args.force_session or get_market_session()

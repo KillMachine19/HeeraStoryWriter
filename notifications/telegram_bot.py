@@ -172,7 +172,7 @@ def send_stock_alert(stock: dict[str, Any], news: dict[str, Any]) -> None:
 
 def send_cycle_divider(session: str, cycle_num: int | None = None) -> None:
     """
-    Compact one-line divider sent at the start of every 10-minute scan cycle.
+    Compact one-line divider sent at the start of every 35-minute scan cycle.
     Gives the channel a clear visual boundary between runs.
     """
     import pytz
@@ -214,67 +214,103 @@ def send_session_start(session: str) -> None:
         f"📅 {_esc(date_str)}  \\|  Started {_esc(time_str)}",
         f"⏱ {window}",
         "",
-        f"*Watchlist:* {_esc(str(len(WATCHLIST_ALL)))} stocks",
+        f"*Universe:* {_esc(str(len(WATCHLIST_ALL)))} stocks · \\$250M\\+ market cap",
         f"_{sector_summary}_",
         "",
-        "*Scanning for:*",
-        "• Watchlist — all news developments \\+ price moves \\(no threshold\\)",
-        "• Market movers — ±2%\\+ move, \\>\\$250M cap, US\\-listed",
+        "*Flags individual cards for:*",
+        "🏦 Analyst upgrade / downgrade / price target",
+        "📊 Earnings beat / miss / guidance",
+        "🎤 CEO\\-CFO conference remarks",
+        "📋 Company press releases",
+        "📰 Notable moves \\(≥1\\.5%\\) with retail Stocktwits interest",
         "",
-        "Scan interval: every 10 minutes\\.  First results incoming\\.",
+        "Scan interval: every 35 minutes\\. News ≤ 3h old only\\.",
     ]
     _send_message("\n".join(lines))
 
 
-def send_watchlist_sector_update(sector: str, items: list[dict]) -> None:
+_SECTOR_EMOJI = {
+    "Space":       "🚀",
+    "Pharma":      "💊",
+    "Biotech":     "🧬",
+    "Consumer":    "🛍",
+    "Real Estate": "🏢",
+}
+
+_SIGNAL_EMOJI = {
+    "analyst":       "🏦",
+    "earnings":      "📊",
+    "ceo_statement": "🎤",
+    "press_release": "📋",
+    "news":          "📰",
+    "none":          "📰",
+}
+
+_SIGNAL_LABEL = {
+    "analyst":       "Analyst Action",
+    "earnings":      "Earnings",
+    "ceo_statement": "CEO/CFO Statement",
+    "press_release": "Press Release",
+    "news":          "News",
+    "none":          "News",
+}
+
+
+def send_stock_card(item: dict, session: str) -> None:
     """
-    Send a sector-grouped watchlist update to the channel.
-    Only stocks with news or notable moves are shown.
-    Stocks with neither are omitted; if the whole sector is quiet,
-    the caller should send a brief "quiet" note instead.
+    Send an individual stock card for a flaggable watchlist stock.
+
+    Format:
+      {sector_emoji} *{TICKER}* · {Sector} · {arrow} {pct}%
+      ${price} · {session}
+
+      {signal_emoji} *{Signal Label}*
+      • [Headline](url)  _(source · time)_
+      • [Headline](url)  _(source · time)_
     """
-    active = [i for i in items if i.get("has_news") or i.get("has_notable_move")]
-    if not active:
-        return
+    sym    = item["symbol"]
+    sector = item.get("sector", "")
+    pct    = item.get("pct_change", 0)
+    price  = item.get("current_price", 0)
+    sig    = item.get("signal_type", "news")
+    news   = item.get("news", [])
 
-    sector_emoji = {"Space": "🚀", "Pharma": "💊", "Biotech": "🧬", "Consumer": "🛍"}.get(sector, "📌")
-    lines = [f"{sector_emoji} *{_esc(sector)} Sector Update*", ""]
+    sect_e  = _SECTOR_EMOJI.get(sector, "📌")
+    sig_e   = _SIGNAL_EMOJI.get(sig, "📰")
+    sig_lbl = _SIGNAL_LABEL.get(sig, "News")
+    arrow   = "📈" if pct >= 0 else "📉"
+    pct_str = f"{pct:+.2f}%"
+    sess_lbl = session_label(session)
+    yf_url  = f"https://finance.yahoo.com/quote/{sym}/news"
 
-    for item in active:
-        sym   = item["symbol"]
-        pct   = item.get("pct_change", 0)
-        price = item.get("current_price", 0)
-        arrow = "🟢" if pct >= 0 else "🔴"
-        move  = f"{pct:+.2f}%" if abs(pct) >= 0.1 else "—"
+    lines: list[str] = [
+        f"{sect_e} *[{_esc(sym)}]({yf_url})* · {_esc(sector)} · {arrow} *{_esc(pct_str)}*",
+        f"\\${_esc(str(price))} · {_esc(sess_lbl)}",
+        "",
+        f"{sig_e} *{_esc(sig_lbl)}*",
+    ]
 
-        yf_url = f"https://finance.yahoo.com/quote/{sym}/news"
-        lines.append(f"{arrow} *[{_esc(sym)}]({yf_url})*  {_esc(move)}  \\${_esc(str(price))}")
+    if news:
+        for article in news[:3]:
+            headline = _esc(article.get("headline", "")[:90])
+            url      = article.get("url", "")
+            source   = _esc(article.get("source", ""))
+            pub_time = _esc(article.get("published_at", ""))
+            time_tag = f" · _{pub_time}_" if pub_time else ""
+            art_sig  = article.get("signal_type", "news")
+            art_e    = _SIGNAL_EMOJI.get(art_sig, "")
 
-        articles = item.get("news", [])
-        if articles:
-            for article in articles[:2]:
-                headline = _esc(article.get("headline", "")[:85])
-                url      = article.get("url", "")
-                source   = _esc(article.get("source", ""))
-                pub_time = _esc(article.get("published_at", ""))
-                time_tag = f" _{pub_time}_" if pub_time else ""
-                if url:
-                    lines.append(f"  • [{headline}]({url}) _\\({source}\\)_{time_tag}")
-                else:
-                    lines.append(f"  • {headline} _\\({source}\\)_{time_tag}")
-        else:
-            # Notable move but no news found today — link to Yahoo Finance for manual check
-            lines.append(f"  _No news found today — [check Yahoo Finance]({yf_url})_")
-
-        lines.append("")
+            if url:
+                lines.append(f"• {art_e} [{headline}]({url})")
+            else:
+                lines.append(f"• {art_e} {headline}")
+            if source or pub_time:
+                lines.append(f"  _\\({source}\\){time_tag}_")
+    else:
+        lines.append(f"_No news in last 3h — [check Yahoo Finance]({yf_url})_")
 
     _send_message("\n".join(lines))
-
-
-def send_watchlist_quiet(sector: str) -> None:
-    """Send a one-line 'no news' note for a quiet sector."""
-    emoji = {"Space": "🚀", "Pharma": "💊", "Biotech": "🧬", "Consumer": "🛍"}.get(sector, "📌")
-    _send_message(f"{emoji} *{_esc(sector)}* — No new developments this cycle\\.")
+    logger.info(f"Stock card sent: {sym} {pct:+.2f}% [{sig}]")
 
 
 def send_pdf_report(pdf_path: str, date_str: str, total_flagged: int) -> None:

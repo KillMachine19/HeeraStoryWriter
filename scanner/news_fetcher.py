@@ -36,11 +36,50 @@ def _today_et_cutoff() -> float:
     return midnight_et.timestamp()
 
 
+def _hours_ago_cutoff(hours: int = 3) -> float:
+    """Unix timestamp for N hours ago — used for recency filter."""
+    return time.time() - hours * 3600
+
+
 def _et_time_str(unix_ts: int) -> str:
     """Format a Unix timestamp as 'HH:MM ET' for display."""
     if not unix_ts:
         return ""
     return datetime.fromtimestamp(unix_ts, tz=_ET).strftime("%I:%M %p ET")
+
+
+# ── Signal classification ─────────────────────────────────────────────────────
+
+_ANALYST_KW   = {"upgrade", "downgrade", "price target", "raises pt", "cuts pt",
+                 "initiates", "outperform", "overweight", "underweight", "buy rating",
+                 "sell rating", "neutral", "market perform", "strong buy", "reiterate"}
+_EARNINGS_KW  = {"earnings", "quarterly results", "q1 ", "q2 ", "q3 ", "q4 ",
+                 "revenue", " eps", "profit", " loss", " beat", " miss",
+                 "guidance", "fiscal year", "annual results", "full-year"}
+_CEO_KW       = {"ceo", "cfo", "cto", "chief executive", "chief financial",
+                 "conference", "presentation", "investor day", "remarks", "interview",
+                 "said at", "says at", "speaks at", "comments on"}
+_PR_SOURCES   = {"globenewswire", "globe newswire", "pr newswire", "businesswire",
+                 "business wire", "accesswire", "globe wire"}
+
+
+def classify_signal(headline: str, source: str) -> str:
+    """
+    Classify what kind of catalyst a news article represents.
+    Returns one of: 'analyst' | 'earnings' | 'ceo_statement' | 'press_release' | 'news'
+    """
+    hl  = headline.lower()
+    src = source.lower()
+
+    if src in _PR_SOURCES or any(p in src for p in _PR_SOURCES):
+        return "press_release"
+    if any(k in hl for k in _ANALYST_KW):
+        return "analyst"
+    if any(k in hl for k in _EARNINGS_KW):
+        return "earnings"
+    if any(k in hl for k in _CEO_KW):
+        return "ceo_statement"
+    return "news"
 
 
 # ── Yahoo Finance news (primary, fastest) ─────────────────────────────────────
@@ -66,22 +105,30 @@ def fetch_yahoo_news(symbol: str) -> list[dict]:
         logger.warning(f"Yahoo Finance news failed ({symbol}): {exc}")
         return []
 
-    cutoff = _today_et_cutoff()
+    today_cutoff = _today_et_cutoff()
+    fresh_cutoff = _hours_ago_cutoff(hours=3)
+    # Use the more lenient of the two: today midnight ET
+    # (fresh_cutoff can be before midnight for early AM scans)
+    cutoff = min(today_cutoff, fresh_cutoff)
+
     results = []
     for a in articles:
         pub_ts = a.get("providerPublishTime", 0)
-        if pub_ts < cutoff:
-            continue  # skip yesterday's articles
-        link = a.get("link", "")
+        if pub_ts and pub_ts < cutoff:
+            continue
+        link  = a.get("link", "")
         title = (a.get("title") or "").strip()
         if not title:
             continue
+        source = a.get("publisher", "Yahoo Finance")
         results.append({
             "headline":     title,
-            "source":       a.get("publisher", "Yahoo Finance"),
+            "source":       source,
             "url":          link,
             "summary":      "",
             "published_at": _et_time_str(pub_ts),
+            "signal_type":  classify_signal(title, source),
+            "pub_ts":       pub_ts,
         })
 
     return results[:5]
@@ -112,7 +159,10 @@ def fetch_finnhub_news(symbol: str) -> list[dict]:
         logger.warning(f"Finnhub news failed ({symbol}): {exc}")
         return []
 
-    cutoff = _today_et_cutoff()
+    today_cutoff = _today_et_cutoff()
+    fresh_cutoff = _hours_ago_cutoff(hours=3)
+    cutoff = min(today_cutoff, fresh_cutoff)
+
     results = []
     for a in articles[:8]:
         url_link = a.get("url", "")
@@ -121,13 +171,16 @@ def fetch_finnhub_news(symbol: str) -> list[dict]:
         if not url_link or not headline:
             continue
         if pub_ts and pub_ts < cutoff:
-            continue  # pre-midnight article leaked through date filter
+            continue
+        source = a.get("source", "Finnhub")
         results.append({
             "headline":     headline,
-            "source":       a.get("source", "Finnhub"),
+            "source":       source,
             "url":          url_link,
             "summary":      (a.get("summary") or "")[:300],
             "published_at": _et_time_str(pub_ts),
+            "signal_type":  classify_signal(headline, source),
+            "pub_ts":       pub_ts,
         })
 
     return results[:5]

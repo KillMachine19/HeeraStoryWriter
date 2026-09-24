@@ -11,7 +11,7 @@ on:
   # The Python script self-exits gracefully when outside market hours,
   # so over-scheduling is safe and costs only a few seconds of runner time.
   schedule:
-    - cron: "*/10 8-21 * * 1-5"
+    - cron: "*/35 8-21 * * 1-5"
 
   # ── Manual trigger from GitHub UI ───────────────────────────────────────────
   workflow_dispatch:

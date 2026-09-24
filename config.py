@@ -32,10 +32,11 @@ RSS_FEEDS: dict[str, str] = {
 # ── Watchlist — fixed universe tracked every scan cycle ──────────────────────
 # No ±2% threshold for this list; any news or notable move is flagged.
 WATCHLIST: dict[str, list[str]] = {
-    "Space":    ["SPCX","RKLB","ASTS","LUNR","KRMN","IRDM","VOYG","FLY","BKSY","RDW","LMT","NOC","LHX"],
-    "Pharma":   ["VRTX","AMLX","BBIO","PRAX","KNSA","TAK","RARE","CRNX","VKTX","INSM","IONS","DNLI","VNDA"],
-    "Biotech":  ["KOD","CAPR","INVD","NUVL","KYMR","ARQT","BIVI","CNTB","ABCL","BEAM","ROIV","CGEM","ALT"],
-    "Consumer": ["LEVI","WWW","KTB","CRI","LCII","NKE","WMT","AMZN","TSLA","CCL","WYNN","LVS","MCD","VICI"],
+    "Space":       ["RKLB","ASTS","LUNR","KRMN","IRDM","BKSY","RDW","LMT","NOC","LHX","FLY"],
+    "Pharma":      ["VRTX","AMLX","BBIO","PRAX","KNSA","TAK","RARE","VKTX","INSM","IONS","DNLI","VNDA"],
+    "Biotech":     ["KOD","CAPR","NUVL","KYMR","ARQT","BIVI","CNTB","ABCL","BEAM","ROIV","CGEM","ALT"],
+    "Consumer":    ["LEVI","NKE","WMT","AMZN","MSFT","TSLA","CCL","WYNN","LVS","MCD","CRI","WWW"],
+    "Real Estate": ["AMT","EQIX","PLD","SPG","O","CBRE","DLR","EQR"],
 }
 
 # Flat list for convenience
