@@ -107,8 +107,6 @@ def fetch_yahoo_news(symbol: str) -> list[dict]:
 
     today_cutoff = _today_et_cutoff()
     fresh_cutoff = _hours_ago_cutoff(hours=3)
-    # Use the more lenient of the two: today midnight ET
-    # (fresh_cutoff can be before midnight for early AM scans)
     cutoff = min(today_cutoff, fresh_cutoff)
 
     results = []
@@ -116,11 +114,14 @@ def fetch_yahoo_news(symbol: str) -> list[dict]:
         pub_ts = a.get("providerPublishTime", 0)
         if pub_ts and pub_ts < cutoff:
             continue
-        link  = a.get("link", "")
-        title = (a.get("title") or "").strip()
+        link   = a.get("link", "")
+        title  = (a.get("title") or "").strip()
+        source = a.get("publisher", "Yahoo Finance")
         if not title:
             continue
-        source = a.get("publisher", "Yahoo Finance")
+        # Skip Stocktwits-sourced articles — user already sees those on their feed
+        if "stocktwits" in source.lower():
+            continue
         results.append({
             "headline":     title,
             "source":       source,
@@ -173,6 +174,8 @@ def fetch_finnhub_news(symbol: str) -> list[dict]:
         if pub_ts and pub_ts < cutoff:
             continue
         source = a.get("source", "Finnhub")
+        if "stocktwits" in source.lower():
+            continue
         results.append({
             "headline":     headline,
             "source":       source,
