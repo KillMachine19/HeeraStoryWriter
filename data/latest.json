@@ -1,11 +1,781 @@
 {
   "meta": {
-    "scan_time": "Waiting for first scan",
-    "scan_iso": null,
-    "date": "",
-    "session": "",
-    "cycle": 0
+    "scan_time": "11:01 AM ET",
+    "scan_iso": "2026-09-25T11:01:40.070944-04:00",
+    "date": "Sep 25, 2026",
+    "session": "pre_market",
+    "cycle": 5
   },
-  "watchlist": {},
-  "screener": []
+  "watchlist": {
+    "Space": [
+      {
+        "symbol": "RKLB",
+        "price": 73.04,
+        "pct": -1.72,
+        "notable": true,
+        "news": [
+          {
+            "headline": "Rocket Lab Crashed Back Toward Earth for 3 Months: This Analyst Says It\u2019s About to Double",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=8b55b8f9176342e7f692593bacc3cdd30805ee302a2c563dd36e2f949684f2ce",
+            "time": "09:37 AM ET"
+          },
+          {
+            "headline": "What's Going On With Rocket Lab Stock Friday?",
+            "source": "Benzinga",
+            "url": "https://finnhub.io/api/news?id=ed4fb7e9d1beeb1857777ff64c80714ee10af229f73cf5c9f44e8c714d0d6293",
+            "time": "04:40 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "ASTS",
+        "price": 61.43,
+        "pct": 0.38,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "LUNR",
+        "price": 15.72,
+        "pct": -0.49,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "KRMN",
+        "price": 33.71,
+        "pct": -4.07,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "IRDM",
+        "price": 48.53,
+        "pct": -0.72,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "BKSY",
+        "price": 23.04,
+        "pct": -1.07,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "RDW",
+        "price": 11.6,
+        "pct": 0.0,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "LMT",
+        "price": 521.27,
+        "pct": -0.84,
+        "notable": false,
+        "news": [
+          {
+            "headline": "The S&P 500\u2019s Best Dividend Stocks Share One Powerful Advantage",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=278ce008db78ab70c3fd9430c6196944b20f10bcf12d4afbc33da30494fdf619",
+            "time": "08:51 AM ET"
+          },
+          {
+            "headline": "Lockheed Martin Corporation (LMT) is Attracting Investor Attention: Here is What You Should Know",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=689ef06d5e5a4b2fdcfed5d95f1269f26e19f1f877dd2b1bbb2c69795f851b32",
+            "time": "08:00 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "NOC",
+        "price": 508.65,
+        "pct": -0.08,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Can L3Harris' Contract Cost Control Support Future Margin Growth?",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=adfe5ef19ff3ecb861efea8a41e3d7df0720c2feacf9406c6fb2e3d5f8817bde",
+            "time": "08:08 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "LHX",
+        "price": 238.53,
+        "pct": 0.19,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "FLY",
+        "price": 23.92,
+        "pct": 3.17,
+        "notable": true,
+        "news": []
+      }
+    ],
+    "Pharma": [
+      {
+        "symbol": "VRTX",
+        "price": 519.86,
+        "pct": -0.64,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "AMLX",
+        "price": 29.88,
+        "pct": -0.07,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "BBIO",
+        "price": 65.2,
+        "pct": -3.39,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "PRAX",
+        "price": 281.37,
+        "pct": 1.21,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "KNSA",
+        "price": 75.73,
+        "pct": 0.52,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "TAK",
+        "price": 18.81,
+        "pct": 1.19,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "RARE",
+        "price": 14.34,
+        "pct": -2.71,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "VKTX",
+        "price": 36.04,
+        "pct": -2.13,
+        "notable": true,
+        "news": [
+          {
+            "headline": "Stock Market Split As Nasdaq Hits High, Dow Jones Slides Amid Surging Treasury Yields: Weekly Review",
+            "source": "Investor's Business Daily",
+            "url": "https://finance.yahoo.com/m/a04cf70a-8f06-39e7-aae3-89f1e8a87d24/stock-market-split-as-nasdaq.html",
+            "time": "10:18 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "INSM",
+        "price": 117.21,
+        "pct": -3.37,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "IONS",
+        "price": 44.49,
+        "pct": 0.0,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "DNLI",
+        "price": 20.17,
+        "pct": -1.63,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "VNDA",
+        "price": 4.98,
+        "pct": 0.0,
+        "notable": false,
+        "news": []
+      }
+    ],
+    "Biotech": [
+      {
+        "symbol": "KOD",
+        "price": 32.24,
+        "pct": -2.75,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "CAPR",
+        "price": 8.45,
+        "pct": -1.2,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "NUVL",
+        "price": 123.96,
+        "pct": 0.0,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "KYMR",
+        "price": 112.33,
+        "pct": -3.0,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "ARQT",
+        "price": 25.97,
+        "pct": -1.14,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "BIVI",
+        "price": 1.64,
+        "pct": 3.11,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "CNTB",
+        "price": 1.11,
+        "pct": -1.34,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "ABCL",
+        "price": 12.63,
+        "pct": -0.94,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "BEAM",
+        "price": 24.21,
+        "pct": -1.78,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "ROIV",
+        "price": 35.98,
+        "pct": -0.44,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "CGEM",
+        "price": 15.09,
+        "pct": -3.51,
+        "notable": true,
+        "news": [
+          {
+            "headline": "HC Wainwright & Co. Maintains Buy on Cullinan Therapeutics, Raises Price Target to $35",
+            "source": "Benzinga",
+            "url": "https://finnhub.io/api/news?id=416f31c12962aec81af87c55fc8b083740fbd3ab265ee6836edb4ab64e84888c",
+            "time": "03:48 AM ET"
+          },
+          {
+            "headline": "BTIG Reiterates Buy on Cullinan Therapeutics, Maintains $40 Price Target",
+            "source": "Benzinga",
+            "url": "https://finnhub.io/api/news?id=fe88ad841eb6fefcbabb5f69793233ad44eecc9d3a804905cbcbb4473266083f",
+            "time": "01:49 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "ALT",
+        "price": 3.04,
+        "pct": -0.49,
+        "notable": false,
+        "news": []
+      }
+    ],
+    "Consumer": [
+      {
+        "symbol": "LEVI",
+        "price": 19.73,
+        "pct": -0.17,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "NKE",
+        "price": 35.78,
+        "pct": -0.62,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Nvidia, Meta, Akamai, Comcast, Zscaler, Nike, and More Stocks That Explain Today\u2019s Market",
+            "source": "Barrons.com",
+            "url": "https://finance.yahoo.com/m/77968dfd-ed12-3ec3-9346-140e927860cc/nvidia%2C-meta%2C-akamai%2C.html",
+            "time": "10:05 AM ET"
+          },
+          {
+            "headline": "Nike dips as BofA downgrades stock on longer-than-expected turnaround",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=6daafe72e28fef505e6a5d40a08b75f9c19b73e8e806d6afbec3449bb5ac4a70",
+            "time": "08:48 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "WMT",
+        "price": 107.14,
+        "pct": -0.29,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Walmart and Sam's Club Partnership Helps Strengthen Food Access Across North Texas",
+            "source": "GlobeNewswire",
+            "url": "https://finance.yahoo.com/healthcare/articles/walmart-sams-club-partnership-helps-141800372.html",
+            "time": "10:18 AM ET"
+          },
+          {
+            "headline": "Costco Has Moved Sideways and Down for 1 Year: One Of The Most Respected Wall Street Firms Says 45% Returns Lie Ahead",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=d9a281c2f0978214ba236607cc27755fd63d8dc07b185046dce43017cd02696a",
+            "time": "08:35 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "AMZN",
+        "price": 248.27,
+        "pct": -0.25,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Carrier diversity key to holiday success in a high cost environment",
+            "source": "Supply Chain Dive",
+            "url": "https://finance.yahoo.com/small-business/articles/carrier-diversity-key-holiday-success-142249513.html",
+            "time": "10:22 AM ET"
+          },
+          {
+            "headline": "OpenAI, Anthropic Reportedly Asked by White House to Delay UK Access to New AI Models",
+            "source": "MT Newswires",
+            "url": "https://finance.yahoo.com/technology/ai/articles/openai-anthropic-reportedly-asked-white-142140014.html",
+            "time": "10:21 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "MSFT",
+        "price": 515.81,
+        "pct": 4.04,
+        "notable": true,
+        "news": [
+          {
+            "headline": "Wall Street doubles down on Microsoft stock for investors",
+            "source": "TheStreet",
+            "url": "https://finance.yahoo.com/markets/stocks/articles/wall-street-doubles-down-microsoft-140700514.html",
+            "time": "10:07 AM ET"
+          },
+          {
+            "headline": "Tech stocks gain after tech titan dinner with Trump and China's Xi Jinping: AlphaCheck",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=fd09eb8882e4846082ebb850cddc1fab151baedc7d4fcca9ad329d864c0e4ee1",
+            "time": "09:51 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "TSLA",
+        "price": 371.46,
+        "pct": -1.8,
+        "notable": true,
+        "news": [
+          {
+            "headline": "Market Chatter: Tesla Faces Challenges Scaling Optimus Robot Production",
+            "source": "MT Newswires",
+            "url": "https://finance.yahoo.com/markets/stocks/articles/market-chatter-tesla-faces-challenges-142713827.html",
+            "time": "10:27 AM ET"
+          },
+          {
+            "headline": "Tesla Launches the Semi Truck. The New Roadster Is Up Next.",
+            "source": "Barrons.com",
+            "url": "https://finance.yahoo.com/m/bf500fad-4e23-3952-946e-495dd018b261/tesla-launches-the-semi.html",
+            "time": "10:15 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "CCL",
+        "price": 21.87,
+        "pct": -0.06,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Is Carnival Corp. (CCL) a 'Buy' Ahead of Earnings?",
+            "source": "Zacks",
+            "url": "https://finance.yahoo.com/markets/stocks/articles/carnival-corp-ccl-buy-ahead-133100926.html",
+            "time": "09:31 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "WYNN",
+        "price": 80.63,
+        "pct": 0.37,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Barry Diller Couldn\u2019t Buy MGM, So MGM Is Trying to Buy Diller\u2019s People",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=a8db5b2ea49872b3b90e9a333c67094044be456d865cc9d1350e14564ae85ebd",
+            "time": "08:05 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "LVS",
+        "price": 38.75,
+        "pct": 0.21,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "MCD",
+        "price": 236.19,
+        "pct": -0.76,
+        "notable": false,
+        "news": [
+          {
+            "headline": "3 Stocks in Focus That Declared Dividend Hikes Amid Economic Woes",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=50fcc1056f20c3dfb4d589e957b3dbeab53981babd0e9f852ce0d78724115303",
+            "time": "07:05 AM ET"
+          },
+          {
+            "headline": "David Beckham nets \u00a338 million payout after soaring profits at brands",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=8678e655ebed2175912e02b3751b2708e83246809f78aaddf6a337dc988c678f",
+            "time": "06:36 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "CRI",
+        "price": 30.61,
+        "pct": 1.66,
+        "notable": true,
+        "news": []
+      },
+      {
+        "symbol": "WWW",
+        "price": 19.25,
+        "pct": -0.31,
+        "notable": false,
+        "news": []
+      }
+    ],
+    "Real Estate": [
+      {
+        "symbol": "AMT",
+        "price": 167.85,
+        "pct": 0.27,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "EQIX",
+        "price": 1026.46,
+        "pct": -0.73,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "PLD",
+        "price": 133.24,
+        "pct": -0.44,
+        "notable": false,
+        "news": [
+          {
+            "headline": "Form 8.3",
+            "source": "Business Wire",
+            "url": "https://finance.yahoo.com/markets/options/articles/form-8-3-142500490.html",
+            "time": "10:25 AM ET"
+          },
+          {
+            "headline": "Form 8.3 Prologis, Inc",
+            "source": "Business Wire",
+            "url": "https://finance.yahoo.com/markets/options/articles/form-8-3-prologis-inc-141100836.html",
+            "time": "10:11 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "SPG",
+        "price": 204.24,
+        "pct": -0.22,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "O",
+        "price": 55.28,
+        "pct": -0.34,
+        "notable": false,
+        "news": [
+          {
+            "headline": "This Is All You Need to Earn Over $500 a Month From 3 Strong Buy Stocks",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=4e72741dc7b7316774c152618207f0f58ac436b2b67056b4f3be239590f2d9d1",
+            "time": "08:47 AM ET"
+          },
+          {
+            "headline": "How Much Does a 65-Year-Old Need Invested to Collect $6,250 a Month for Life?",
+            "source": "Yahoo",
+            "url": "https://finnhub.io/api/news?id=f1997ab01e9b4e6ca9202dbf450d06cd6be1362da291e2f12a8746394b81c367",
+            "time": "08:29 AM ET"
+          }
+        ]
+      },
+      {
+        "symbol": "CBRE",
+        "price": 135.75,
+        "pct": -0.57,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "DLR",
+        "price": 180.83,
+        "pct": -0.09,
+        "notable": false,
+        "news": []
+      },
+      {
+        "symbol": "EQR",
+        "price": 63.66,
+        "pct": 0.0,
+        "notable": false,
+        "news": []
+      }
+    ]
+  },
+  "screener": [
+    {
+      "symbol": "AKAM",
+      "name": "Akamai Technologies, Inc.",
+      "pct": 23.3,
+      "price": 136.14,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "Update: Akamai Signs $11.6 Billion Cloud Deal With Anthropic; Shares Up Pre-Bell",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/akamai-signs-11-6-billion-094624926.html",
+          "time": "05:46 AM ET"
+        },
+        {
+          "headline": "TD Cowen Adjusts Price Target on Akamai Technologies to $149 From $140, Keeps Hold Rating",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/td-cowen-adjusts-price-target-093956138.html",
+          "time": "05:39 AM ET"
+        },
+        {
+          "headline": "JPMorgan Adjusts Price Target on Akamai Technologies to $167 From $158, Keeps Neutral Rating",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/jpmorgan-adjusts-price-target-akamai-093944223.html",
+          "time": "05:39 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "ASND",
+      "name": "Ascendis Pharma A/S",
+      "pct": 10.53,
+      "price": 255.0,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "FLR",
+      "name": "Fluor Corporation",
+      "pct": 6.04,
+      "price": 53.69,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "TWLO",
+      "name": "Twilio Inc.",
+      "pct": -4.67,
+      "price": 285.58,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "Premarket movers: Akamai surges on Anthropic deal , Comcast and Twilio slip",
+          "source": "Investing.com",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/premarket-movers-akamai-surges-anthropic-120300944.html",
+          "time": "08:03 AM ET"
+        },
+        {
+          "headline": "How Twilio Makeover Turned Messaging Base Into AI Growth Engine",
+          "source": "Investor's Business Daily",
+          "url": "https://finance.yahoo.com/m/248da56f-4d2a-3ed4-ac43-3f47ed15974f/how-twilio-makeover-turned.html",
+          "time": "08:00 AM ET"
+        },
+        {
+          "headline": "HSBC Downgrades Twilio to Reduce From Hold, Price Target is $211",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/hsbc-downgrades-twilio-reduce-hold-110751550.html",
+          "time": "07:07 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "CXW",
+      "name": "CoreCivic, Inc.",
+      "pct": -4.51,
+      "price": 32.81,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "CoreCivic Names Lucibeth Mayberry CEO as Patrick Swindle Steps Down",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/corecivic-names-lucibeth-mayberry-ceo-122743880.html",
+          "time": "08:27 AM ET"
+        },
+        {
+          "headline": "Lucibeth N. Mayberry Named President and CEO and Director of CoreCivic Patrick D. Swindle Steps Down Due to Health Reasons",
+          "source": "GlobeNewswire",
+          "url": "https://finance.yahoo.com/small-business/articles/lucibeth-n-mayberry-named-president-120000108.html",
+          "time": "08:00 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "SECZ",
+      "name": "Securitize Corp.",
+      "pct": 4.36,
+      "price": 17.22,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "PL",
+      "name": "Planet Labs PBC",
+      "pct": 4.26,
+      "price": 18.37,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "AXTI",
+      "name": "AXT Inc",
+      "pct": 3.81,
+      "price": 78.79,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "ARM",
+      "name": "Arm Holdings plc",
+      "pct": 3.81,
+      "price": 318.01,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "US Stock Market Today: S&P 500 Futures Slip As Hot Growth Keeps Rate Fears High",
+          "source": "Simply Wall St.",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/us-stock-market-today-p-080952587.html",
+          "time": "04:09 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "PGEN",
+      "name": "Precigen, Inc.",
+      "pct": 3.57,
+      "price": 7.98,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "SMTC",
+      "name": "Semtech Corporation",
+      "pct": 3.55,
+      "price": 180.7,
+      "session": "pre_market",
+      "articles": []
+    },
+    {
+      "symbol": "CIFR",
+      "name": "Cipher Digital Inc.",
+      "pct": 3.31,
+      "price": 18.7,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "Cipher Digital Expands Barber Lake Contracted Term to 20 Years",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/technology/articles/cipher-digital-expands-barber-lake-122033614.html",
+          "time": "08:20 AM ET"
+        },
+        {
+          "headline": "Cipher Digital stock jumps after extending Barber Lake lease",
+          "source": "Investing.com",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/cipher-digital-stock-jumps-extending-121952754.html",
+          "time": "08:19 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "P",
+      "name": "Everpure, Inc.",
+      "pct": 3.21,
+      "price": 125.74,
+      "session": "pre_market",
+      "articles": [
+        {
+          "headline": "Dow Jones Futures Signal Rebound For Resilient Market; Tesla, Akamai, Taiwan Semi In Focus",
+          "source": "Investor's Business Daily",
+          "url": "https://finance.yahoo.com/m/f20152d5-c38c-3d1c-80ad-574b31be1248/dow-jones-futures-signal.html",
+          "time": "08:04 AM ET"
+        },
+        {
+          "headline": "Citigroup Adjusts Price Target on Southern Company to $104 From $114, Keeps Buy Rating",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/citigroup-adjusts-price-target-southern-104219554.html",
+          "time": "06:42 AM ET"
+        },
+        {
+          "headline": "Raymond James Adjusts Price Target on Everpure to $140 From $122, Keeps Outperform Rating",
+          "source": "MT Newswires",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/raymond-james-adjusts-price-target-103446925.html",
+          "time": "06:34 AM ET"
+        }
+      ]
+    },
+    {
+      "symbol": "TSEM",
+      "name": "Tower Semiconductor Ltd.",
+      "pct": 2.85,
+      "price": 223.47,
+      "session": "pre_market",
+      "articles": []
+    }
+  ]
 }
